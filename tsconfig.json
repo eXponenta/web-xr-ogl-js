@@ -1,0 +1,14 @@
+{
+    "compilerOptions": {
+		"outDir": "/dist/",
+		"module": "ES2022",
+		"target": "ES6",
+		"allowJs": true,
+		"moduleResolution": "node",
+		"typeRoots": ["../node_module/@types"],
+        "types": [ "webxr" ]
+    },
+	"exclude": [
+        "./node_modules"
+    ],
+}

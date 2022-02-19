@@ -1,0 +1,20 @@
+{
+  "name": "web-xr-ogl-js",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "prebuild": "rimraf ./dist/",
+    "build": "webpack --config webpack.config.js"
+  },
+  "devDependencies": {
+    "@types/webxr": "^0.2.3",
+    "copy-webpack-plugin": "^10.2.4",
+    "rimraf": "^3.0.2",
+    "webpack": "^5.69.1",
+    "webpack-cli": "^4.9.2"
+  },
+  "dependencies": {
+    "ogl": "^0.0.86"
+  }
+}
