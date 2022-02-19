@@ -82,6 +82,12 @@ export class XRState {
 	 * @returns {import('webxr').XRLayer}
 	 */
 	getLayer (type = 'base', gl) {
+
+		if (!XRState.layersSupport && (type !== 'base' || this.layers.length > 1)) {
+			console.warn('[XR] Only single base layer is supported!');
+			return this.baseLayer;
+		}
+
 		const layer = new XRWebGLLayer(this.session, gl);
 
 		this.layers.push(layer);
@@ -171,8 +177,7 @@ export class XRRenderer extends Renderer {
 
 		const camera = options.camera;
 
-		const { lastXRFrame, space, session } = xr;
-		const baseLayer = session.renderState.baseLayer || session.renderState.layers?.[0]
+		const { lastXRFrame, space, baseLayer } = xr;
 		const poses = lastXRFrame.getViewerPose(space);
 
 		if (!poses) {
