@@ -73,7 +73,10 @@ function copyVec3 (target, v) {
 	requiestButton.addEventListener('click', async () => {
 		await renderer.requestXR();
 
-		//renderer.xr.requestAnimatioFrame(resize);
+		renderer.xr.requestAnimatioFrame(resize);
+		// oculus has resynced frames, lol
+		// and stop RAF from window before accept session
+		renderer.requestAnimatioFrame(update);
 	});
 
 
