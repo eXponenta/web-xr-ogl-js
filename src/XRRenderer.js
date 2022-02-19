@@ -37,9 +37,9 @@ export class XRState {
 
 	static async requestSession({
 		mode = 'immersive-vr',
-		space = 'local-floor',
+		space = 'local',
 		options = {
-			requiredFeatures: ['local-floor'],
+			requiredFeatures: ['local'],
 			/*optionalFeatures: ['layers']*/
 		}
 	} = {})
@@ -76,6 +76,8 @@ export class XRState {
 	requestAnimatioFrame ( callback ) {
 
 		return this.session.requestAnimationFrame((time, frame) => {
+			console.log('raf', time, frame);
+
 			this.lastXRFrame = frame;
 
 			callback(time, frame);
