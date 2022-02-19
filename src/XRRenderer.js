@@ -40,7 +40,7 @@ export class XRState {
 		space = 'local-floor',
 		options = {
 			requiredFeatures: ['local-floor'],
-			optionalFeatures: ['layers']
+			/*optionalFeatures: ['layers']*/
 		}
 	} = {})
 	{
@@ -68,8 +68,7 @@ export class XRState {
 			this.baseLayer = layer;
 		}
 
-
-		this.session.updateRenderState({layers: this.layers});
+		this.session.updateRenderState({baseLayer: this.baseLayer});
 
 		return layer;
 	}
