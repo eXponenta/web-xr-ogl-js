@@ -79,6 +79,8 @@ export class XRState {
 			this.lastXRFrame = frame;
 
 			callback(time, frame);
+
+			this.lastXRFrame = null;
 		});
 	}
 
@@ -145,6 +147,10 @@ export class XRRenderer extends Renderer {
 		const { baseLayer, lastXRFrame, space } = xr;
 
 		const poses = lastXRFrame.getViewerPose(space);
+
+		if (!poses) {
+			return;
+		}
 
 		poses.views.forEach((view, i) => {
 			const { projectionMatrix, transform } = view;
