@@ -7,7 +7,12 @@ function getXR() {
 	return navigator.xr;
 }
 
+
+
 export class XRState {
+	static layersChecked = false;
+	static layersSupport = false;
+
 	constructor() {
 		/**
 		 * @type {import('webxr').XRSession}
@@ -37,16 +42,33 @@ export class XRState {
 
 	static async requestSession({
 		mode = 'immersive-vr',
-		space = 'local',
+		space = 'local-floor',
 		options = {
-			requiredFeatures: ['local'],
-			/*optionalFeatures: ['layers']*/
+			requiredFeatures: ['local-floor'],
+			optionalFeatures: ['layers']
 		}
 	} = {})
 	{
 		const state = new XRState();
 
-		state.session = await getXR().requestSession(mode, options);
+		if (!this.layersChecked) {
+			try {
+				state.session = await getXR().requestSession(mode, {
+					requiredFeatures: [...options.requiredFeatures, 'layers'],
+					optionalFeatures: [...options.optionalFeatures]
+				});
+				this.layersSupport = true;
+			} catch (e) {
+				this.layersSupport = false;
+				console.log('Layers not supported');
+			}
+
+			this.layersChecked = true;
+		}
+
+		if (!state.session) {
+			state.session = await getXR().requestSession(mode, options);
+		}
 
 		state.space = await state.session.requestReferenceSpace(space);
 
@@ -68,7 +90,11 @@ export class XRState {
 			this.baseLayer = layer;
 		}
 
-		this.session.updateRenderState({baseLayer: this.baseLayer});
+		if (XRState.layersSupport) {
+			this.session.updateRenderState({layers: this.layers});
+		} else {
+			this.session.updateRenderState({baseLayer: this.baseLayer});
+		}
 
 		return layer;
 	}
@@ -76,7 +102,6 @@ export class XRState {
 	requestAnimatioFrame ( callback ) {
 
 		return this.session.requestAnimationFrame((time, frame) => {
-			console.log('raf', time, frame);
 
 			this.lastXRFrame = frame;
 
@@ -146,8 +171,8 @@ export class XRRenderer extends Renderer {
 
 		const camera = options.camera;
 
-		const { baseLayer, lastXRFrame, space } = xr;
-
+		const { lastXRFrame, space, session } = xr;
+		const baseLayer = session.renderState.baseLayer || session.renderState.layers?.[0]
 		const poses = lastXRFrame.getViewerPose(space);
 
 		if (!poses) {
