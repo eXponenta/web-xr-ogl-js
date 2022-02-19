@@ -79,7 +79,7 @@ function copyVec3 (target, v) {
 
 	const scene = new Transform();
 
-	scene.position.set(0, 1, -2);
+	scene.position.set(0, 1, -4);
 
 	const planeGeometry = new Plane(gl);
 	const sphereGeometry = new Sphere(gl);
