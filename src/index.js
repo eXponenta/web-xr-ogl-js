@@ -73,7 +73,7 @@ function copyVec3 (target, v) {
 	requiestButton.addEventListener('click', async () => {
 		await renderer.requestXR();
 
-		renderer.xr.requestAnimatioFrame(resize);
+		//renderer.xr.requestAnimatioFrame(resize);
 	});
 
 
