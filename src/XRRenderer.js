@@ -69,7 +69,7 @@ export class XRState {
 		}
 
 
-		this.session.updateRenderState({ baseLayer: this.baseLayer, layers: this.layers});
+		this.session.updateRenderState({layers: this.layers});
 
 		return layer;
 	}
