@@ -1,44 +1,26 @@
 import { Renderer } from 'ogl';
+import type { XRFrame, XRLayer, XRReferenceSpace, XRReferenceSpaceType, XRSessionInit, XRSessionMode, XRWebGLLayer } from 'webxr';
+import { XRSessionLayers } from './xr';
 
-/**
- * @returns {import('webxr').XRSystem}
- */
 function getXR() {
 	return navigator.xr;
 }
 
-
+export interface ISessionRequest {
+	mode?: XRSessionMode;
+	space?: XRReferenceSpaceType;
+	options?: XRSessionInit;
+}
 
 export class XRState {
 	static layersChecked = false;
 	static layersSupport = false;
 
-	constructor() {
-		/**
-		 * @type {import('webxr').XRSession}
-		 */
-		this.session = null;
-
-		/**
-		 * @type {import('webxr').XRReferenceSpace}
-		 */
-		this.space = null;
-
-		/**
-		 * @type {import('webxr').XRLayer[]}
-		 */
-		this.layers = [];
-
-		/**
-		 * @type {import('webxr').XRWebGLLayer}
-		 */
-		this.baseLayer = null;
-
-		/**
-		 * @type {import('webxr').XRFrame}
-		 */
-		this.lastXRFrame = null;
-	}
+	session: XRSessionLayers;
+	space: XRReferenceSpace;
+	layers: Array<XRLayer | XRWebGLLayer> = [];
+	baseLayer: XRWebGLLayer = null;
+	lastXRFrame: XRFrame = null;
 
 	static async requestSession({
 		mode = 'immersive-vr',
@@ -47,7 +29,7 @@ export class XRState {
 			requiredFeatures: ['local-floor'],
 			optionalFeatures: ['layers']
 		}
-	} = {})
+	}: ISessionRequest = {})
 	{
 		const state = new XRState();
 
@@ -88,7 +70,7 @@ export class XRState {
 			return this.baseLayer;
 		}
 
-		const layer = new XRWebGLLayer(this.session, gl);
+		const layer = new self.XRWebGLLayer(this.session, gl);
 
 		this.layers.push(layer);
 
@@ -123,13 +105,10 @@ export class XRState {
 }
 
 export class XRRenderer extends Renderer {
+	xr: XRState = null;
+
 	constructor(options) {
 		super(options);
-
-		/**
-		 * @type {XRState}
-		 */
-		this.xr = null;
 	}
 
 	onSessionLost () {
@@ -138,7 +117,7 @@ export class XRRenderer extends Renderer {
 		console.warn('XR Session end');
 	}
 
-	async requestXR(options) {
+	async requestXR(options?) {
 		if (this.xr) {
 			return Promise.resolve()
 		}
@@ -205,7 +184,7 @@ export class XRRenderer extends Renderer {
 			this.setViewportUnchecked(viewport);
 
 			super.render({
-				...options, camera, target, clear: i === 0
+				...options, camera, target, clear: i === 0 && options.clear
 			});
 		});
 	}

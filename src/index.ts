@@ -1,4 +1,3 @@
-//@ts-check
 import { Camera, Transform, Program, Mesh, Plane, Sphere, Box, Cylinder } from 'ogl';
 import { XRRenderer } from './XRRenderer';
 
@@ -25,28 +24,6 @@ const fragment = /* glsl */ `
 		gl_FragColor.a = 1.0;
 	}
 `;
-
-/**
- * @returns {import('webxr').XRSystem}
- */
-function getXR() {
-	return navigator.xr;
-}
-
-function getRAF (callback) {
-	return session
-		? session.requestAnimationFrame(callback)
-		: requestAnimationFrame(callback);
-}
-
-
-function copyQuat3 (target, v) {
-	return target.set(v.x, v.y, v.z, v.w);
-}
-
-function copyVec3 (target, v) {
-	return target.set(v.x, v.y, v.z);
-}
 
 {
 	const requiestButton = document.querySelector('#requiest-xr');
