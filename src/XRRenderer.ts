@@ -184,7 +184,7 @@ export class XRRenderer extends Renderer {
 			this.setViewportUnchecked(viewport);
 
 			super.render({
-				...options, camera, target, clear: i === 0 && options.clear
+				...options, camera, target, clear: i === 0 && (options.clear != void 0 ? options.clear : this.autoClear)
 			});
 		});
 	}

@@ -28,7 +28,7 @@ const fragment = /* glsl */ `
 {
 	const requiestButton = document.querySelector('#requiest-xr');
 	const canvas = document.querySelector('#frame');
-	const renderer = new XRRenderer({ dpr: 2, canvas, antialias : true, autoClear: false });
+	const renderer = new XRRenderer({ dpr: 2, canvas, antialias : true, autoClear: true });
 
 	/**
 	 * @type {WebGLRenderingContext}
