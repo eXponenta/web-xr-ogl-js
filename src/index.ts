@@ -104,6 +104,8 @@ const fragment = /* glsl */ `
 		cube.rotation.y -= 0.04;
 		cylinder.rotation.y -= 0.02;
 
+		renderer.gl.clearColor(1,1,1,1);
+
 		renderer.render({ scene, camera });
 	}
 }
