@@ -65,6 +65,18 @@ declare module 'ogl' {
 		frustumCull?: boolean;
 	}
 
+	interface IProgramInit {
+		vertex: string;
+		fragment: string;
+		uniforms?: Record<string, any>;
+		transparent?: boolean;
+		cullFace?: number;
+		frontFace?: number;
+		depthTest?: boolean
+		depthWrite?: boolean;
+		depthFunc?: boolean;
+	}
+
 	class Vec3 extends Array<number> {
 		set x(v: number);
 		get x(): number;
@@ -78,6 +90,24 @@ declare module 'ogl' {
 		constructor(x?: number, y?: number, z?: number);
 
 		set (x?: number, y?: number, z?: number): this;
+	}
+
+	class Quat extends Array<number> {
+		set x(v: number);
+		get x(): number;
+
+		set y(v: number);
+		get y(): number;
+
+		set z(v: number);
+		get z(): number;
+
+		set w(v: number);
+		get w(): number;
+
+		constructor(x?: number, y?: number, z?: number, w?: number);
+
+		set (x?: number, y?: number, z?: number, w?: number): this;
 	}
 
 	class Euler extends Array<[number, number, number]> {
@@ -118,6 +148,7 @@ declare module 'ogl' {
 	class Transform {
 		readonly position: Vec3;
 		readonly rotation: Euler;
+		readonly quaternion: Quat;
 
 		constructor ();
 
@@ -137,7 +168,12 @@ declare module 'ogl' {
 	}
 
 	class Program {
-		constructor(gl: GLContext, options?: any);
+		uniforms: Record<string, any>;
+		attributeLocations: Array<WebGLActiveInfo>;
+
+		constructor(gl: GLContext, options?: IProgramInit);
+
+		use (options: any): void;
 	}
 
 	class Mesh extends Transform {
