@@ -46,6 +46,10 @@ import { XRRenderer } from "./xr/XRRenderer";
 		// oculus has resynced frames, lol
 		// and stop RAF from window before accept session
 		renderer.requestAnimatioFrame(update);
+
+		const planeLayer = renderer.createLayer('quad', {width: 1, height: 1});
+
+		scene.addChild(planeLayer);
 	});
 
 	const scene = new Transform();
@@ -56,8 +60,7 @@ import { XRRenderer } from "./xr/XRRenderer";
 	const cubeGeometry = new Box(gl);
 	const cylinderGeometry = new Cylinder(gl);
 
-	const program = new PrimitiveMaterial(gl);
-
+/*
 	const plane = new QuadPrimitive(gl, {
 		width: 2,
 		height: 2,
@@ -66,7 +69,7 @@ import { XRRenderer } from "./xr/XRRenderer";
 
 	plane.position.set(0, 1.3, 0);
 	plane.setParent(scene);
-
+*/
 	const sphere = new Mesh(gl, {
 		geometry: sphereGeometry,
 		program: new PrimitiveMaterial(gl, { uniforms: { uColor: {value: [1, 1, 0] } } }),
@@ -97,7 +100,7 @@ import { XRRenderer } from "./xr/XRRenderer";
 	function update(time, frame = null) {
 		renderer.requestAnimatioFrame(update);
 
-		plane.rotation.y -= 0.02;
+		//plane.rotation.y -= 0.02;
 		sphere.rotation.y -= 0.03;
 		cube.rotation.y -= 0.04;
 		cylinder.rotation.y -= 0.02;

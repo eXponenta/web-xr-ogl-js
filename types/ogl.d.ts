@@ -154,7 +154,11 @@ declare module 'ogl' {
 
 		lookAt(vec3: IVec3Arr | Vec3, invert?: boolean): this;
 
-		setParent(node: Transform, setParent?: boolean): void;
+		setParent(node: Transform, notifyParent?: boolean): void;
+
+		addChild(node: Transform, notifyChild?: boolean): void
+
+		removeChild(node: Transform, notifyChild?: boolean): void
 	}
 
 	class Camera extends Transform {

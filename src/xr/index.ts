@@ -38,7 +38,7 @@ declare module "webxr" {
 	interface IQuadLayerInit {
 		height?: number;
 		width?: number;
-		layout: 'default' | 'mono' | 'stereo' | 'stereo-left-righ' | 'stereo-top-bottom';
+		layout?: 'default' | 'mono' | 'stereo' | 'stereo-left-righ' | 'stereo-top-bottom';
 		space: XRSpace;
 		transform?: XRRigidTransform;
 		viewPixelHeight: number;

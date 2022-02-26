@@ -11,7 +11,7 @@ import type {
 	XRWebGLLayer,
 } from "webxr";
 import { XRSessionLayers } from ".";
-import { OGLXRLayer } from "./OGLXRLayer";
+import { OGLQuadLayer, OGLXRLayer } from "./OGLXRLayer";
 
 function getXR() {
 	return navigator.xr;
@@ -57,7 +57,7 @@ export class XRState {
 	// called from layer binding for dropping layer from state
 
 	/* internal*/
-	onLayerRemove(layer: XRCompositionLayer | XRWebGLLayer) {
+	onLayerDestroy(layer: XRCompositionLayer | XRWebGLLayer) {
 		if (!XRState.layersSupport) {
 			return;
 		}
@@ -67,38 +67,53 @@ export class XRState {
 		this.session.updateRenderState({ layers: this.layers });
 	}
 
-	getLayer(type = "base", gl): OGLXRLayer<XRCompositionLayer> | null {
+	getLayer(
+		gl: GLContext,
+		type: "base" | "cube" | "quad" | "sphere" = "base",
+		options: any = {}
+	): XRCompositionLayer | XRWebGLLayer {
 		if (
 			!XRState.layersSupport &&
 			(type !== "base" || this.layers.length > 1)
 		) {
 			console.warn("[XR] Only single base layer is supported!");
-			return null;
+			return this.baseLayer;
 		}
 
 		// check that supported
 		if (!this.glBinding && XRState.layersSupport) {
-			this.glBinding = new self.XRWebGLBinding(this.session, gl);
 		}
 
-		const layer = new self.XRWebGLLayer(this.session, gl);
+		let layer: XRCompositionLayer | XRWebGLLayer;
+
+		if (type === "base" || !XRState.layersSupport) {
+			layer = new self.XRWebGLLayer(this.session, gl);
+			this.baseLayer = layer;
+		} else if (!options) {
+			throw new Error("Only base layer can miss options!");
+		} else {
+			this.glBinding =
+				this.glBinding || new self.XRWebGLBinding(this.session, gl);
+
+			switch (type) {
+				case "quad": {
+					layer = this.glBinding.createQuadLayer(options);
+				}
+				default:
+					throw new Error("Unsuppoted yet:" + type);
+			}
+		}
 
 		// push front
 		this.layers.unshift(layer);
-
-		if (type === "base") {
-			this.baseLayer = layer;
-		}
 
 		if (XRState.layersSupport) {
 			this.session.updateRenderState({ layers: this.layers });
 		} else {
 			this.session.updateRenderState({ baseLayer: this.baseLayer });
-
-			return null;
 		}
 
-		return null;
+		return layer;
 	}
 
 	requestAnimatioFrame(callback) {
@@ -118,9 +133,58 @@ export class XRState {
 
 export class XRRenderer extends Renderer {
 	xr: XRState = null;
+	layers: OGLXRLayer<XRCompositionLayer>[] = [];
+
+	static layersCtors: Record<
+		"cube" | "quad" | "sphere",
+		new (context: XRRenderer, ...any: any[]) => OGLXRLayer
+	> = {
+		cube: null,
+		sphere: null,
+		quad: OGLQuadLayer,
+	};
 
 	constructor(options) {
 		super(options);
+	}
+
+	createLayer<T extends XRCompositionLayer = XRCompositionLayer>(
+		type: "cube" | "quad" | "sphere" = "quad",
+		options: any = {}
+	): OGLXRLayer<T> {
+		if (!this.xr) {
+			throw new Error("Layers can be requiested ONLY in XR mode");
+		}
+
+		const Ctor = XRRenderer.layersCtors[type];
+
+		if (!Ctor) {
+			return null;
+		}
+
+		const layer = new Ctor(this, options);
+
+		this.layers.push(layer);
+
+		let nativeLayer: XRCompositionLayer;
+
+		if (XRState.layersSupport) {
+			nativeLayer = this.xr.getLayer(this.gl, type, options) as XRCompositionLayer;
+		}
+
+		layer.bindLayer(nativeLayer);
+
+		return layer as OGLXRLayer<T, any>;
+	}
+
+	onLayerDestroy(layer: OGLXRLayer, nativeOnly: boolean) {
+		if (!nativeOnly) {
+			this.layers = this.layers.filter((e) => layer !== e);
+		}
+
+		if (this.xr && layer.nativeLayer) {
+			this.xr.onLayerDestroy(layer.nativeLayer);
+		}
 	}
 
 	onSessionLost() {
@@ -138,7 +202,8 @@ export class XRRenderer extends Renderer {
 
 		this.xr = await XRState.requestSession(options);
 
-		this.xr.getLayer("base", this.gl);
+		// must be, because we should render
+		this.xr.getLayer(this.gl, "base");
 
 		return this.xr;
 	}

@@ -26,16 +26,15 @@ const fragment = /* glsl */ `
 	}
 `;
 
-let primitiveProgramCache: PrimitiveProgram;
-
 export class PrimitiveProgram extends Program {
 	constructor (context: GLContext, uniforms = {}) {
 		super (context, {
 			vertex,
 			fragment,
-
+			transparent: true,
 			// Don't cull faces so that plane is double sided - default is gl.BACK
 			cullFace: null,
+			uniforms: uniforms
 		});
 	}
 
