@@ -6,7 +6,8 @@
   "scripts": {
     "prebuild": "rimraf ./dist/",
     "build": "webpack --config webpack.config.js --mode=development",
-	"release": "webpack --config webpack.config.js --mode=production"
+    "release": "webpack --config webpack.config.js --mode=production",
+    "serve": "http-server -c-1 -p 1010 -S -K ./keys/key.pem -C ./keys/cert.pem ./dist"
   },
   "devDependencies": {
     "@types/webxr": "^0.2.3",
@@ -18,6 +19,7 @@
     "webpack-cli": "^4.9.2"
   },
   "dependencies": {
-    "ogl": "^0.0.86"
+    "ogl": "^0.0.86",
+    "webxr-layers-polyfill": "^1.0.2"
   }
 }

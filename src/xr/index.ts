@@ -7,6 +7,7 @@ import type {
 	XRWebGLLayerInit,
 	XRRigidTransform,
 	XRWebGLBinding,
+	XRProjectionLayer
 } from "webxr";
 
 declare class XRWebGLLayerExt extends XRWebGLLayer {
@@ -23,6 +24,10 @@ declare module "webxr" {
 		readonly needsRedraw: boolean;
 	}
 
+	interface XRProjectionLayer extends XRCompositionLayer {
+
+	}
+
 	interface XRCubeLayer extends XRCompositionLayer {
 		space: XRSpace;
 		orientation: DOMPointReadOnly;
@@ -35,6 +40,9 @@ declare module "webxr" {
 		width: number;
 	}
 
+	interface ICompositionLayerInit {
+
+	}
 	interface IQuadLayerInit {
 		height?: number;
 		width?: number;
@@ -52,14 +60,19 @@ declare module "webxr" {
 		imageIndex: number | null;
 		textureWidth: number;
 		textureHeight: number;
+		viewport: {
+			x: number, y: number, width: number, height: number
+		}
 	}
 
 	class XRWebGLBinding {
 		constructor (session: XRSessionLayers, context: WebGL2RenderingContext | WebGLRenderingContext);
 
 		createQuadLayer (init: IQuadLayerInit): XRCubeLayer;
+		createProjectionLayer (init?: ICompositionLayerInit): XRProjectionLayer;
 
-		getSubImage (layer: XRQuadLayer, frame: XRFrame, eye?:  'none' | 'left' | 'right'): XRWebGLSubImage;
+		getSubImage (layer: XRCompositionLayer, frame: XRFrame, eye?:  'none' | 'left' | 'right'): XRWebGLSubImage;
+		getViewSubImage (layer: XRProjectionLayer, frame: XRView): XRWebGLSubImage;
 	}
 }
 

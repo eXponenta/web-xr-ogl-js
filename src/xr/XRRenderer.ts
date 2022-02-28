@@ -1,5 +1,8 @@
 import { Renderer } from "ogl";
+import XRLayers from "webxr-layers-polyfill";
+
 import type {
+	IQuadLayerInit,
 	XRCompositionLayer,
 	XRFrame,
 	XRLayer,
@@ -12,6 +15,9 @@ import type {
 } from "webxr";
 import { XRSessionLayers } from ".";
 import { OGLQuadLayer, OGLXRLayer } from "./OGLXRLayer";
+import { XRRenderTarget } from "./XRRenderTarget";
+
+new XRLayers();
 
 function getXR() {
 	return navigator.xr;
@@ -26,14 +32,18 @@ export interface ISessionRequest {
 export class XRState {
 	static layersSupport = false;
 
+	context: XRRenderer;
 	session: XRSessionLayers;
 	space: XRReferenceSpace;
 	layers: Array<XRLayer | XRWebGLLayer> = [];
-	baseLayer: XRWebGLLayer = null;
+	baseLayer: XRWebGLLayer | XRCompositionLayer = null;
+	baseLayerTarget: XRRenderTarget;
 	lastXRFrame: XRFrame = null;
 	glBinding: XRWebGLBinding;
 
-	static async requestSession({
+	static async requestSession(
+		context: XRRenderer,
+		{
 		mode = "immersive-vr",
 		space = "local-floor",
 		options = {
@@ -47,7 +57,8 @@ export class XRState {
 			state.session = await getXR().requestSession(mode, options);
 		}
 
-		this.layersSupport === !!state.session.renderState.layers;
+		state.context = context;
+		this.layersSupport = !!state.session.renderState.layers;
 
 		state.space = await state.session.requestReferenceSpace(space);
 
@@ -72,6 +83,9 @@ export class XRState {
 		type: "base" | "cube" | "quad" | "sphere" = "base",
 		options: any = {}
 	): XRCompositionLayer | XRWebGLLayer {
+
+		options = Object.assign(options, { space: this.space, viewPixelHeight: 100, viewPixelWidth: 100 }, options);
+
 		if (
 			!XRState.layersSupport &&
 			(type !== "base" || this.layers.length > 1)
@@ -86,7 +100,7 @@ export class XRState {
 
 		let layer: XRCompositionLayer | XRWebGLLayer;
 
-		if (type === "base" || !XRState.layersSupport) {
+		if (!XRState.layersSupport) {
 			layer = new self.XRWebGLLayer(this.session, gl);
 			this.baseLayer = layer;
 		} else if (!options) {
@@ -96,8 +110,15 @@ export class XRState {
 				this.glBinding || new self.XRWebGLBinding(this.session, gl);
 
 			switch (type) {
+				case "base": {
+					layer = this.glBinding.createProjectionLayer({});
+					this.baseLayer = layer;
+					this.baseLayerTarget = new XRRenderTarget(this.context);
+					break;
+				}
 				case "quad": {
-					layer = this.glBinding.createQuadLayer(options);
+					layer = this.glBinding.createQuadLayer(options as IQuadLayerInit);
+					break;
 				}
 				default:
 					throw new Error("Unsuppoted yet:" + type);
@@ -110,7 +131,7 @@ export class XRState {
 		if (XRState.layersSupport) {
 			this.session.updateRenderState({ layers: this.layers });
 		} else {
-			this.session.updateRenderState({ baseLayer: this.baseLayer });
+			this.session.updateRenderState({ baseLayer: this.baseLayer as XRWebGLLayer });
 		}
 
 		return layer;
@@ -200,7 +221,7 @@ export class XRRenderer extends Renderer {
 
 		await this.gl.makeXRCompatible();
 
-		this.xr = await XRState.requestSession(options);
+		this.xr = await XRState.requestSession(this, options);
 
 		// must be, because we should render
 		this.xr.getLayer(this.gl, "base");
@@ -233,7 +254,7 @@ export class XRRenderer extends Renderer {
 
 		const camera = options.camera;
 
-		const { lastXRFrame, space, baseLayer } = xr;
+		const { lastXRFrame, space, baseLayer, glBinding, baseLayerTarget } = xr;
 		const poses = lastXRFrame.getViewerPose(space);
 
 		if (!poses) {
@@ -243,14 +264,29 @@ export class XRRenderer extends Renderer {
 		poses.views.forEach((view, i) => {
 			const { projectionMatrix, transform } = view;
 			const { position, orientation } = transform;
-			const viewport = baseLayer.getViewport(view);
 
-			const target = {
-				target: gl.FRAMEBUFFER,
-				buffer: baseLayer.framebuffer,
-				width: viewport.width,
-				height: viewport.height,
-			};
+			let target;
+			let viewport;
+
+			if (baseLayer instanceof self.XRWebGLLayer) {
+				viewport = baseLayer.getViewport(view);
+
+				target = {
+					target: gl.FRAMEBUFFER,
+					buffer: baseLayer.framebuffer,
+					width: viewport.width,
+					height: viewport.height,
+				};
+			} else {
+				const glSubImage = glBinding.getViewSubImage( baseLayer as XRCompositionLayer, view );
+
+				viewport = glSubImage.viewport;
+				target = baseLayerTarget;
+
+				if ( i === 0 ) {
+					baseLayerTarget.attach(glSubImage);
+				}
+			}
 
 			camera.projectionMatrix.copy(projectionMatrix);
 			camera.position.set(position.x, position.y, position.z);
@@ -274,6 +310,9 @@ export class XRRenderer extends Renderer {
 					(options.clear != void 0 ? options.clear : this.autoClear),
 			});
 		});
+
+		// reset state, XRLyaer polyfill will corrupt state
+		this.bindFramebuffer();
 	}
 
 	render(options) {

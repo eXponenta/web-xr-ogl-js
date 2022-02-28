@@ -143,6 +143,8 @@ declare module 'ogl' {
 		render (options: IRenderTaskOptions);
 
 		setSize (width: number, height: number);
+
+		bindFramebuffer (framebufferLike?: {target?: number, buffer?: WebGLFramebuffer}): void;
 	}
 
 	class Transform {
@@ -178,6 +180,17 @@ declare module 'ogl' {
 		constructor(gl: GLContext, options?: IProgramInit);
 
 		use (options: any): void;
+	}
+
+	class Texture {
+		texture: WebGLTexture;
+		width: number;
+		height: number;
+		image: HTMLImageElement | ArrayBuffer | ArrayBufferView | HTMLCanvasElement | ImageBitmap;
+
+		bind(): void;
+
+		update(): void;
 	}
 
 	class Mesh extends Transform {

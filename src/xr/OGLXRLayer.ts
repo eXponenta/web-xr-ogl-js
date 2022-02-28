@@ -2,11 +2,14 @@ import { Mesh, Transform } from "ogl";
 import type {
 	IQuadLayerInit,
 	XRCompositionLayer,
+	XRFrame,
 	XRQuadLayer,
 	XRRigidTransform,
+	XRView,
 } from "webxr";
 import { QuadPrimitive } from "../primitives/QuadPrimitive";
 import type { XRRenderer } from "./XRRenderer";
+import { XRRenderTarget } from "./XRRenderTarget";
 
 export class OGLXRLayer<
 	T extends XRCompositionLayer = XRCompositionLayer,
@@ -17,6 +20,7 @@ export class OGLXRLayer<
 	nativeLayer: T;
 	nativeTransform: XRRigidTransform;
 	emulatedLayers: Mesh[]; //
+	targets: Record<string, XRRenderTarget> = {};
 
 	onLayerDestroy: (layer: this, nativeOnly: boolean) => void;
 
@@ -41,6 +45,18 @@ export class OGLXRLayer<
 
 	protected _createFallbackLayers(): Array<Mesh> {
 		throw new Error("Not implemented");
+	}
+
+	getRenderTarget (frame: XRFrame, eye: 'left' | 'right' | 'none' = 'none'): XRRenderTarget {
+		const target = this.targets[eye] || new XRRenderTarget(this.context);
+
+		target.attach(
+			this.context.xr.glBinding.getSubImage(this.nativeLayer as XRCompositionLayer, frame, eye)
+		);
+
+		this.targets[eye] = target;
+
+		return target;
 	}
 
 	// bind layer, if layer is null - native will be unbound and dropeed

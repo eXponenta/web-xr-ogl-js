@@ -42,14 +42,15 @@ import { XRRenderer } from "./xr/XRRenderer";
 	requiestButton.addEventListener("click", async () => {
 		await renderer.requestXR();
 
-		renderer.xr.requestAnimatioFrame(resize);
-		// oculus has resynced frames, lol
-		// and stop RAF from window before accept session
-		renderer.requestAnimatioFrame(update);
-
 		const planeLayer = renderer.createLayer('quad', {width: 1, height: 1});
 
 		scene.addChild(planeLayer);
+
+		//renderer.xr.requestAnimatioFrame(resize);
+
+		// oculus has resynced frames, lol
+		// and stop RAF from window before accept session
+		renderer.xr.requestAnimatioFrame(update);
 	});
 
 	const scene = new Transform();
