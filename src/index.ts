@@ -1,18 +1,21 @@
 import {
 	Camera,
 	Transform,
-	Program,
 	Mesh,
-	Plane,
 	Sphere,
 	Box,
 	Cylinder,
+	Texture,
 } from "ogl";
+import { XRQuadLayer } from "webxr";
 import { PrimitiveMaterial } from "./primitives/PrimitiveMaterial";
 import { CheckmateTexture } from "./utils/ChekmateTexture";
+import { OGLXRLayer } from "./xr/OGLXRLayer";
 import { XRRenderer } from "./xr/XRRenderer";
 
 {
+
+
 	const requiestButton = document.querySelector("#requiest-xr");
 	const canvas = document.querySelector("#frame");
 	const renderer = new XRRenderer({
@@ -27,11 +30,36 @@ import { XRRenderer } from "./xr/XRRenderer";
 	 */
 	const gl = renderer.gl;
 
+	const textCanvas = document.createElement('canvas');
+	textCanvas.width = 1024;
+	textCanvas.height = 512;
+
+	const textContext = textCanvas.getContext('2d');
+
+	const gridTexture = new Texture<HTMLCanvasElement>(gl, {image: textCanvas});// new CheckmateTexture(gl, {width: 1024, height: 1024, count: 4})
+
+	let frameIndex = 0;
+
+	function updateText () {
+		frameIndex ++;
+
+		textContext.clearRect(0, 0, textCanvas.width, textCanvas.height);
+
+		textContext.strokeStyle = 'red';
+		textContext.lineWidth = 10;
+		textContext.strokeRect(0,0, textCanvas.width, textCanvas.height);
+
+		textContext.font = '100px Arial';
+		textContext.textAlign = 'center';
+		textContext.fillText(
+			"Frame: " + frameIndex.toFixed(0),
+			textCanvas.width / 2, 50 + textCanvas.height / 2, textCanvas.width
+		)
+
+		gridTexture.needsUpdate = true;
+	}
+
 	gl.clearColor(1, 1, 1, 1);
-
-	const gridTexture = new CheckmateTexture(gl, {width: 1024, height: 1024, count: 4})
-
-	document.body.appendChild(gridTexture.image);
 
 	const camera = new Camera(gl, { fov: 35 });
 	camera.lookAt([0, 0, 0]);
@@ -43,17 +71,18 @@ import { XRRenderer } from "./xr/XRRenderer";
 	window.addEventListener("resize", resize, false);
 	resize();
 
+
+	let planeLayer: OGLXRLayer<XRQuadLayer>;
+
 	requiestButton.addEventListener("click", async () => {
 		await renderer.requestXR();
 
-		const planeLayer = renderer.createLayer('quad', {
+		planeLayer = renderer.createLayer<XRQuadLayer>('quad', {
 			width: 2,
 			height: 1,
 			viewPixelHeight: gridTexture.image.height,
 			viewPixelWidth: gridTexture.image.width
 		});
-
-		planeLayer.referencedTexture = gridTexture;
 
 		scene.addChild(planeLayer);
 
@@ -72,16 +101,6 @@ import { XRRenderer } from "./xr/XRRenderer";
 	const cubeGeometry = new Box(gl);
 	const cylinderGeometry = new Cylinder(gl);
 
-/*
-	const plane = new QuadPrimitive(gl, {
-		width: 2,
-		height: 2,
-		color: [1, 0, 1]
-	});
-
-	plane.position.set(0, 1.3, 0);
-	plane.setParent(scene);
-*/
 	const sphere = new Mesh(gl, {
 		geometry: sphereGeometry,
 		program: new PrimitiveMaterial(gl, { uniforms: { uColor: {value: [1, 1, 0] } } }),
@@ -112,7 +131,15 @@ import { XRRenderer } from "./xr/XRRenderer";
 	function update(time, frame = null) {
 		renderer.requestAnimatioFrame(update);
 
-		//plane.rotation.y -= 0.02;
+		updateText();
+
+		if (planeLayer && frameIndex > 10) {
+			planeLayer.rotation.y -= 0.02;
+
+			planeLayer.referencedTexture = gridTexture;
+			planeLayer.dirty = true;
+		}
+
 		sphere.rotation.y -= 0.03;
 		cube.rotation.y -= 0.04;
 		cylinder.rotation.y -= 0.02;

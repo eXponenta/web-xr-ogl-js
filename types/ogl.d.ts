@@ -34,6 +34,9 @@ declare module 'ogl' {
 			width: number;
 			height: number;
 		}
+
+		textureUnits: Array<any>;
+		activeTextureUnit: number;
 	}
 
 	interface IRenderTarget {
@@ -218,6 +221,7 @@ declare module 'ogl' {
 		width: number;
 		height: number;
 		image: T;
+		needsUpdate: boolean;
 
 		constructor (gl: GLContext, options?: ITextureOptions <T>);
 

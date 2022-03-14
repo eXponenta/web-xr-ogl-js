@@ -75,8 +75,15 @@ export class XRState {
 		}
 
 		this.layers = this.layers.filter((l) => l !== layer);
+		this.updateRenderState();
+	}
 
-		this.session.updateRenderState({ layers: this.layers });
+	updateRenderState() {
+		if (XRState.layersSupport) {
+			this.session.updateRenderState({ layers: this.layers });
+		} else {
+			this.session.updateRenderState({ baseLayer: this.baseLayer as XRWebGLLayer });
+		}
 	}
 
 	getLayer(
@@ -129,11 +136,7 @@ export class XRState {
 		// push front
 		this.layers.push(layer);
 
-		if (XRState.layersSupport) {
-			this.session.updateRenderState({ layers: this.layers });
-		} else {
-			this.session.updateRenderState({ baseLayer: this.baseLayer as XRWebGLLayer });
-		}
+		this.updateRenderState();
 
 		return layer;
 	}
@@ -246,6 +249,11 @@ export class XRRenderer extends Renderer {
 		this.gl.viewport(x, y, width, height);
 	}
 
+	bind2DTextureDirect (texture: WebGLTexture) {
+		this.gl.bindTexture(this.gl.TEXTURE_2D, texture);
+        this.state.textureUnits[this.state.activeTextureUnit] = -1;
+	}
+
 	renderXR(options) {
 		const { xr, gl } = this;
 
@@ -261,6 +269,8 @@ export class XRRenderer extends Renderer {
 		if (!poses) {
 			return;
 		}
+
+		xr.updateRenderState();
 
 		poses.views.forEach((view, i) => {
 			const { projectionMatrix, transform } = view;

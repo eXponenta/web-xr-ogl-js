@@ -94,7 +94,7 @@ export class XRRenderTarget {
 
 		gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture.texture, 0);
 
-		gl.bindTexture (gl.TEXTURE_2D, this.subImageAttachment.colorTexture);
+		this.context.bind2DTextureDirect(this.subImageAttachment.colorTexture);
 
 		gl.copyTexSubImage2D(
 			gl.TEXTURE_2D,

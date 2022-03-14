@@ -188,10 +188,10 @@ export class OGLQuadLayer extends OGLXRLayer<XRQuadLayer, IQuadLayerInit> {
 		if ((this.nativeLayer.needsRedraw || this.dirty) && frame && this.referencedTexture) {
 
 			if (!this.options.layout?.includes('stereo')) {
-				this.getRenderTarget(frame, 'none');
+				this.getRenderTarget(frame, 'none').copyFrom(this.referencedTexture);;
 			} else {
 				for(let key of ['left', 'right'] as const) {
-					this.getRenderTarget(frame, key);//.copyFrom(this.referencedTexture);
+					this.getRenderTarget(frame, key).copyFrom(this.referencedTexture);
 				}
 			}
 
