@@ -270,8 +270,6 @@ export class XRRenderer extends Renderer {
 			return;
 		}
 
-		xr.updateRenderState();
-
 		poses.views.forEach((view, i) => {
 			const { projectionMatrix, transform } = view;
 			const { position, orientation } = transform;
@@ -295,7 +293,7 @@ export class XRRenderer extends Renderer {
 				target = baseLayerTarget;
 
 				if ( i === 0 ) {
-					baseLayerTarget.attach(glSubImage);
+					baseLayerTarget.attach(glSubImage, true);
 				}
 			}
 
@@ -322,6 +320,9 @@ export class XRRenderer extends Renderer {
 			});
 		});
 
+		if (baseLayerTarget) {
+			baseLayerTarget.blit();
+		}
 
 		// reset state, XRLyaer polyfill will corrupt state
 		this.bindFramebuffer();
