@@ -1,4 +1,4 @@
-import { Mesh, Transform } from "ogl";
+import { Mesh, Texture, Transform, IImageSource, Quat, Vec3 } from "ogl";
 import type {
 	IQuadLayerInit,
 	XRCompositionLayer,
@@ -21,6 +21,7 @@ export class OGLXRLayer<
 	nativeTransform: XRRigidTransform;
 	emulatedLayers: Mesh[]; //
 	targets: Record<string, XRRenderTarget> = {};
+	referencedTexture: Texture<IImageSource> = null;
 
 	onLayerDestroy: (layer: this, nativeOnly: boolean) => void;
 
@@ -47,11 +48,19 @@ export class OGLXRLayer<
 		throw new Error("Not implemented");
 	}
 
-	getRenderTarget (frame: XRFrame, eye: 'left' | 'right' | 'none' = 'none'): XRRenderTarget {
+	getRenderTarget(
+		frame: XRFrame,
+		eye: "left" | "right" | "none" = "none"
+	): XRRenderTarget {
 		const target = this.targets[eye] || new XRRenderTarget(this.context);
 
+		target.referencedTexture = this.referencedTexture;
 		target.attach(
-			this.context.xr.glBinding.getSubImage(this.nativeLayer as XRCompositionLayer, frame, eye)
+			this.context.xr.glBinding.getSubImage(
+				this.nativeLayer as XRCompositionLayer,
+				frame,
+				eye
+			)
 		);
 
 		this.targets[eye] = target;
@@ -70,27 +79,32 @@ export class OGLXRLayer<
 			this.destroyFallback();
 
 			this.nativeLayer = layer;
-			this._updateNative();
+			this._updateNative(null);
 		} else {
 			// add virtual laye
 			this.createFallback();
 		}
 	}
 
-	protected _updateNative() {
+	protected _updateNative(frame: XRFrame = null) {
 		// we can pool it, XRRig not allow pooling
 		// need has a invalidate stat, but this is not implemented
 
 		if (this.transformDirty || !this.nativeTransform) {
-			this.nativeTransform = new self.XRRigidTransform(
-				this.position,
-				this.quaternion
-			);
+			const q = new Quat();
+			const p = new Vec3();
+
+			this.updateMatrixWorld(false);
+
+			this.worldMatrix.getRotation(q);
+			this.worldMatrix.getTranslation(p);
+
+			this.nativeTransform = new self.XRRigidTransform(p,q);
 		}
 	}
 
-	update() {
-		this.nativeLayer && this._updateNative();
+	update(frame: XRFrame) {
+		this.nativeLayer && this._updateNative(frame);
 	}
 
 	needUpdateTransform() {
@@ -165,9 +179,20 @@ export class OGLQuadLayer extends OGLXRLayer<XRQuadLayer, IQuadLayerInit> {
 		return fallback;
 	}
 
-	_updateNative(): void {
+	_updateNative(frame: XRFrame = null): void {
 		super._updateNative();
 
 		this.nativeLayer.transform = this.nativeTransform;
+
+		if (this.nativeLayer.needsRedraw && frame && this.referencedTexture) {
+
+			if (!this.options.layout?.includes('stereo')) {
+				this.getRenderTarget(frame, 'none');
+			} else {
+				for(let key of ['left', 'right'] as const) {
+					this.getRenderTarget(frame, key);//.copyFrom(this.referencedTexture);
+				}
+			}
+		}
 	}
 }

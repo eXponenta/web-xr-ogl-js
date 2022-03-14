@@ -84,7 +84,7 @@ export class XRState {
 		options: any = {}
 	): XRCompositionLayer | XRWebGLLayer {
 
-		options = Object.assign(options, { space: this.space, viewPixelHeight: 100, viewPixelWidth: 100 }, options);
+		options = Object.assign({}, { space: this.space, viewPixelHeight: 100, viewPixelWidth: 100 }, options);
 
 		if (
 			!XRState.layersSupport &&
@@ -126,7 +126,7 @@ export class XRState {
 		}
 
 		// push front
-		this.layers.unshift(layer);
+		this.layers.push(layer);
 
 		if (XRState.layersSupport) {
 			this.session.updateRenderState({ layers: this.layers });
@@ -311,8 +311,18 @@ export class XRRenderer extends Renderer {
 			});
 		});
 
+
 		// reset state, XRLyaer polyfill will corrupt state
 		this.bindFramebuffer();
+
+		this.layers.forEach((e) => {
+			if (e === baseLayer as any) {
+				return;
+			}
+
+			e.update(lastXRFrame);
+		});
+
 	}
 
 	render(options) {

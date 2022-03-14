@@ -1,4 +1,4 @@
-import { Texture } from "ogl";
+import { IImageSource, Texture } from "ogl";
 import type { XRWebGLSubImage } from "webxr";
 import { XRRenderer } from "./XRRenderer";
 
@@ -15,7 +15,7 @@ export class XRRenderTarget {
 
 	subImageAttachment: XRWebGLSubImage;
 
-	referencedTexture: Texture;
+	referencedTexture: Texture<IImageSource>;
 
 	constructor (context: XRRenderer, buffer?: WebGLFramebuffer) {
 		this.context = context;
@@ -73,7 +73,7 @@ export class XRRenderTarget {
 		this.referencedTexture = null;
 	}
 
-	copyFrom (texture: Texture): void {
+	copyFrom (texture: Texture <IImageSource>): void {
 		if (!texture.texture || texture.width * texture.width <= 0) {
 			return;
 		}
@@ -93,6 +93,8 @@ export class XRRenderTarget {
 		texture.bind();
 
 		gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture.texture, 0);
+
+		gl.bindTexture (gl.TEXTURE_2D, this.subImageAttachment.colorTexture);
 
 		gl.copyTexSubImage2D(
 			gl.TEXTURE_2D,

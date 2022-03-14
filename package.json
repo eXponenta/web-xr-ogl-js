@@ -7,7 +7,7 @@
     "prebuild": "rimraf ./dist/",
     "build": "webpack --config webpack.config.js --mode=development",
     "release": "webpack --config webpack.config.js --mode=production",
-    "serve": "http-server -c-1 -p 1010 -S -K ./keys/key.pem -C ./keys/cert.pem ./dist"
+    "serve": "http-server -c-1 -p 1011 -S -K ./keys/key.pem -C ./keys/cert.pem ./dist"
   },
   "devDependencies": {
     "@types/webxr": "^0.2.3",

@@ -5,6 +5,7 @@
 type GLContext = WebGL2RenderingContext | WebGLRenderingContext;
 
 declare module 'ogl' {
+	type IImageSource = HTMLImageElement | ArrayBuffer | ArrayBufferView | HTMLCanvasElement | ImageBitmap;
 	type ICameraInit = ICameraPerspectiveInit | ICameraOrthoInit;
 
 	type IVec3Arr = [number, number, number];
@@ -77,6 +78,26 @@ declare module 'ogl' {
 		depthFunc?: boolean;
 	}
 
+	interface ITextureOptions <T extends IImageSource> {
+		image?: T;
+		target?: number;
+		type?: number;
+		format?: number;
+		internalFormat?: number;
+		wrapS?: number;
+		wrapT?: number;
+		generateMipmaps?: boolean;
+		minFilter?: number;
+		magFilter?: number;
+		premultiplyAlpha?: boolean;
+		unpackAlignment?: number;
+		flipY?: boolean;
+		anisotropy?: number;
+		level?: number;
+		width?: number;
+		height?: number;
+	}
+
 	class Vec3 extends Array<number> {
 		set x(v: number);
 		get x(): number;
@@ -123,6 +144,12 @@ declare module 'ogl' {
 		constructor (x?: number, y?: number, z?: number, order?: 'YXZ');
 	}
 
+	class Mat4 extends Array<number> {
+		getRotation(q: Quat):  this;
+		getTranslation(v: Vec3): this;
+		getScaling(v: Vec3): this;
+	}
+
 	class Renderer {
 		readonly gl: GLContext & {canvas: HTMLCanvasElement, renderer: Renderer};
 		readonly state: IRendererState;
@@ -148,6 +175,8 @@ declare module 'ogl' {
 	}
 
 	class Transform {
+		readonly worldMatrix: Mat4;
+		readonly matrix: Mat4;
 		readonly position: Vec3;
 		readonly rotation: Euler;
 		readonly quaternion: Quat;
@@ -161,6 +190,8 @@ declare module 'ogl' {
 		addChild(node: Transform, notifyChild?: boolean): void
 
 		removeChild(node: Transform, notifyChild?: boolean): void
+
+		updateMatrixWorld (force?: boolean): void;
 	}
 
 	class Camera extends Transform {
@@ -182,11 +213,13 @@ declare module 'ogl' {
 		use (options: any): void;
 	}
 
-	class Texture {
+	class Texture <T extends IImageSource = HTMLImageElement> {
 		texture: WebGLTexture;
 		width: number;
 		height: number;
-		image: HTMLImageElement | ArrayBuffer | ArrayBufferView | HTMLCanvasElement | ImageBitmap;
+		image: T;
+
+		constructor (gl: GLContext, options?: ITextureOptions <T>);
 
 		bind(): void;
 

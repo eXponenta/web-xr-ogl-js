@@ -10,6 +10,7 @@ import {
 } from "ogl";
 import { PrimitiveMaterial } from "./primitives/PrimitiveMaterial";
 import { QuadPrimitive } from "./primitives/QuadPrimitive";
+import { CheckmateTexture } from "./utils/ChekmateTexture";
 import { XRRenderer } from "./xr/XRRenderer";
 
 {
@@ -29,6 +30,10 @@ import { XRRenderer } from "./xr/XRRenderer";
 
 	gl.clearColor(1, 1, 1, 1);
 
+	const gridTexture = new CheckmateTexture(gl, {width: 256, height: 256, count: 4})
+
+	document.body.appendChild(gridTexture.image);
+
 	const camera = new Camera(gl, { fov: 35 });
 	camera.lookAt([0, 0, 0]);
 
@@ -42,7 +47,14 @@ import { XRRenderer } from "./xr/XRRenderer";
 	requiestButton.addEventListener("click", async () => {
 		await renderer.requestXR();
 
-		const planeLayer = renderer.createLayer('quad', {width: 1, height: 1});
+		const planeLayer = renderer.createLayer('quad', {
+			width: 1,
+			height: 1,
+			viewPixelHeight: gridTexture.image.height,
+			viewPixelWidth: gridTexture.image.width
+		});
+
+		planeLayer.referencedTexture = gridTexture;
 
 		scene.addChild(planeLayer);
 
