@@ -257,10 +257,23 @@ export class XRRenderTarget {
 			return;
 		}
 
-		this.context.gl.deleteFramebuffer(this.buffer);
+		const  {
+			gl
+		} = this.context;
+
+		gl.deleteFramebuffer(this.buffer);
+
+		this.copyBuffer && gl.deleteFramebuffer(this.copyBuffer);
+		this.renderBuffers.forEach(rb => {
+			gl.deleteRenderbuffer(rb);
+		});
+
 		this.subImageAttachment = null;
 		this.target = 0;
 		this.viewport = null;
 		this.referencedTexture = null;
+		this.copyBuffer = null;
+		this.buffer = null;
+		this.renderBuffers = [];
 	}
 }

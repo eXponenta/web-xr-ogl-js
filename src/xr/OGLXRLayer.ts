@@ -145,6 +145,13 @@ export class OGLXRLayer<
 	destroy() {
 		this.onLayerDestroy?.(this, false);
 		this.destroyNative();
+
+		for(let key in this.targets) {
+			this.targets[key].destroy();
+		}
+
+		this.targets = null;
+		this.referencedTexture = null;
 	}
 }
 

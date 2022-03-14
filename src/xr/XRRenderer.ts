@@ -36,7 +36,7 @@ export class XRState {
 	context: XRRenderer;
 	session: XRSessionLayers;
 	space: XRReferenceSpace;
-	layers: Array<XRLayer | XRWebGLLayer> = [];
+	layers: Array<XRCompositionLayer | XRWebGLLayer> = [];
 	baseLayer: XRWebGLLayer | XRCompositionLayer = null;
 	baseLayerTarget: XRRenderTarget;
 	lastXRFrame: XRFrame = null;
@@ -154,6 +154,14 @@ export class XRState {
 	end() {
 		this.session && this.session.end();
 	}
+
+	destroy() {
+		for(const layer of this.layers as XRCompositionLayer[]) {
+			layer.destroy && layer.destroy();
+		}
+
+		this.layers = null;
+	}
 }
 
 export class XRRenderer extends Renderer {
@@ -202,6 +210,7 @@ export class XRRenderer extends Renderer {
 		return layer as OGLXRLayer<T, any>;
 	}
 
+	/* called by layer internal */
 	onLayerDestroy(layer: OGLXRLayer, nativeOnly: boolean) {
 		if (!nativeOnly) {
 			this.layers = this.layers.filter((e) => layer !== e);
@@ -213,7 +222,17 @@ export class XRRenderer extends Renderer {
 	}
 
 	onSessionLost() {
+		this.xr.destroy();
+
+		for (const layer of this.layers) {
+			// clear refs
+			layer.nativeLayer = null;
+			layer.onLayerDestroy = null;
+			layer.destroy();
+		}
+
 		this.xr = null;
+		this.layers = [];
 
 		console.warn("XR Session end");
 	}
@@ -229,6 +248,8 @@ export class XRRenderer extends Renderer {
 
 		// must be, because we should render
 		this.xr.getLayer(this.gl, "base");
+
+		this.xr.session.addEventListener('end', this.onSessionLost.bind(this));
 
 		return this.xr;
 	}

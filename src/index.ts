@@ -61,8 +61,9 @@ import { XRRenderer } from "./xr/XRRenderer";
 
 	gl.clearColor(1, 1, 1, 1);
 
-	const camera = new Camera(gl, { fov: 35 });
+	const camera = new Camera(gl, { fov: 90 });
 	camera.lookAt([0, 0, 0]);
+	camera.position.set(0, 1.6, 0);
 
 	function resize() {
 		renderer.setSize(window.innerWidth, window.innerHeight);
@@ -86,11 +87,18 @@ import { XRRenderer } from "./xr/XRRenderer";
 
 		scene.addChild(planeLayer);
 
-		//renderer.xr.requestAnimatioFrame(resize);
-
 		// oculus has resynced frames, lol
 		// and stop RAF from window before accept session
-		renderer.xr.requestAnimatioFrame(update);
+		renderer.requestAnimatioFrame(update);
+
+
+		renderer.xr.session.addEventListener('end', () => {
+			setTimeout(()=>{
+				// oculus has resynced frames, lol
+				// and stop RAF from window before accept session
+			renderer.requestAnimatioFrame(update);
+			});
+		})
 	});
 
 	const scene = new Transform();
