@@ -21,6 +21,10 @@ function generateCheckmate (width = 256, height = 256, count = 4) {
 		);
 	}
 
+	gridCtx.lineWidth = 4;
+	gridCtx.strokeStyle = 'red';
+	gridCtx.setLineDash([5, 15]);
+	gridCtx.strokeRect(0, 0, width, height);
 	gridCtx.fill();
 
 	return grid;

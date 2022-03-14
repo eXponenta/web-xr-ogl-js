@@ -22,6 +22,7 @@ export class OGLXRLayer<
 	emulatedLayers: Mesh[]; //
 	targets: Record<string, XRRenderTarget> = {};
 	referencedTexture: Texture<IImageSource> = null;
+	dirty: boolean = false;
 
 	onLayerDestroy: (layer: this, nativeOnly: boolean) => void;
 
@@ -180,11 +181,11 @@ export class OGLQuadLayer extends OGLXRLayer<XRQuadLayer, IQuadLayerInit> {
 	}
 
 	_updateNative(frame: XRFrame = null): void {
-		super._updateNative();
+		super._updateNative(frame);
 
 		this.nativeLayer.transform = this.nativeTransform;
 
-		if (this.nativeLayer.needsRedraw && frame && this.referencedTexture) {
+		if ((this.nativeLayer.needsRedraw || this.dirty) && frame && this.referencedTexture) {
 
 			if (!this.options.layout?.includes('stereo')) {
 				this.getRenderTarget(frame, 'none');
@@ -193,6 +194,8 @@ export class OGLQuadLayer extends OGLXRLayer<XRQuadLayer, IQuadLayerInit> {
 					this.getRenderTarget(frame, key);//.copyFrom(this.referencedTexture);
 				}
 			}
+
+			this.dirty = false;
 		}
 	}
 }

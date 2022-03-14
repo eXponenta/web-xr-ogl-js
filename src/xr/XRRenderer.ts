@@ -17,6 +17,7 @@ import { XRSessionLayers } from ".";
 import { OGLQuadLayer, OGLXRLayer } from "./OGLXRLayer";
 import { XRRenderTarget } from "./XRRenderTarget";
 
+/* Polyfill when needed */
 new XRLayers();
 
 function getXR() {

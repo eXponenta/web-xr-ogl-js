@@ -9,7 +9,6 @@ import {
 	Cylinder,
 } from "ogl";
 import { PrimitiveMaterial } from "./primitives/PrimitiveMaterial";
-import { QuadPrimitive } from "./primitives/QuadPrimitive";
 import { CheckmateTexture } from "./utils/ChekmateTexture";
 import { XRRenderer } from "./xr/XRRenderer";
 
@@ -30,7 +29,7 @@ import { XRRenderer } from "./xr/XRRenderer";
 
 	gl.clearColor(1, 1, 1, 1);
 
-	const gridTexture = new CheckmateTexture(gl, {width: 256, height: 256, count: 4})
+	const gridTexture = new CheckmateTexture(gl, {width: 1024, height: 1024, count: 4})
 
 	document.body.appendChild(gridTexture.image);
 
@@ -48,7 +47,7 @@ import { XRRenderer } from "./xr/XRRenderer";
 		await renderer.requestXR();
 
 		const planeLayer = renderer.createLayer('quad', {
-			width: 1,
+			width: 2,
 			height: 1,
 			viewPixelHeight: gridTexture.image.height,
 			viewPixelWidth: gridTexture.image.width
