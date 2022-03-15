@@ -1,4 +1,4 @@
-html, body, canvas, .overlay {
+html, body, canvas, .overlay, #react-content {
     margin: 0;
     padding: 0;
     position: static;

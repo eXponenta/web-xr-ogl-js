@@ -231,6 +231,8 @@ declare module 'ogl' {
 	}
 
 	class Mesh extends Transform {
+		geometry: any;
+
 		constructor(gl: GLContext, options?: any);
 	}
 

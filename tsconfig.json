@@ -6,6 +6,8 @@
 		"allowJs": true,
 		"moduleResolution": "node",
 		"typeRoots": ["../node_module/@types"],
+		"jsx": "react-jsx",
+		"allowSyntheticDefaultImports": true,
         "types": [ "webxr" ]
     },
 	"exclude": [
