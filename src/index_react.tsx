@@ -1,4 +1,10 @@
+import { StrictMode } from "react";
 import { render } from "react-dom";
 import App from "./App";
 
-render(<App/>, document.getElementById("react-content"));
+render(
+	<StrictMode>
+		<App />
+	</StrictMode>,
+	document.getElementById("react-content")
+);

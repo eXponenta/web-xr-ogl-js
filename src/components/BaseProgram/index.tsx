@@ -62,18 +62,20 @@ export class BaseProgramWithTexture extends Program {
 			vertex: VERT,
 			fragment: FRAG,
 			transparent: true,
-			uniforms:{
-				uColor: { value: [1,1,1] },
-				uPoint: { value: [0,0] },
+			uniforms: {
+				uColor: { value: [1, 1, 1] },
+				uPoint: { value: [0, 0] },
 				uSampler0: { value: null },
-				uSampler0Size: {value: [1,1]}
-			}
+				uSampler0Size: { value: [1, 1] },
+			},
 		});
 	}
 
 	set texture(v) {
 		this.uniforms.uSampler0 = { value: v };
-		this.uniforms.uSampler0Size = {value: v.image ? [v.image.width, v.image.height] : [1,1]}
+		this.uniforms.uSampler0Size = {
+			value: v.image ? [v.image.width, v.image.height] : [1, 1],
+		};
 	}
 
 	get texture() {
@@ -81,23 +83,26 @@ export class BaseProgramWithTexture extends Program {
 	}
 }
 
-extend({BaseProgramWithTexture});
+extend({ BaseProgramWithTexture });
 
 declare global {
 	namespace JSX {
-	  interface IntrinsicElements {
-		baseProgramWithTexture: Node<BaseProgramWithTexture, typeof BaseProgramWithTexture>
-	  }
+		interface IntrinsicElements {
+			baseProgramWithTexture: Node<
+				BaseProgramWithTexture,
+				typeof BaseProgramWithTexture
+			>;
+		}
 	}
-  }
-
+}
 
 export default React.forwardRef<Program, IProgProps>(
-	({ color = "pink", mousePoint = [0, 0], children }, ref) => {
+	function BaseProgWithTexture(
+		{ color = "pink", mousePoint = [0, 0], children },
+		ref
+	) {
 		return (
-			<baseProgramWithTexture
-				ref={ref}
-			>
+			<baseProgramWithTexture ref={ref}>
 				{children}
 			</baseProgramWithTexture>
 		);

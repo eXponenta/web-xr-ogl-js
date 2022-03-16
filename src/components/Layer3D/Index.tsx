@@ -2,7 +2,7 @@ import { Mesh, Program, Transform } from "ogl";
 import { useEffect, useRef, useState } from "react";
 import BaseProgram from "../BaseProgram";
 
-export default ({
+export default function Layer3D ({
 	anchor = [0, 0],
 	width = 1,
 	height = 1,
@@ -10,7 +10,7 @@ export default ({
 	rotation = [0, 0, 0],
 	children,
 	...props
-}) => {
+}) {
 	const transformRef = useRef<Transform>();
 	const meshRef = useRef<Mesh>();
 	const [hovered, setHover] = useState(false);
