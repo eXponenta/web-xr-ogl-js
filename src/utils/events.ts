@@ -21,7 +21,7 @@ export const createEvents = (state: RootState) => {
 			}
 		});
 
-		const intersects: Instance[] = state.raycaster.intersectMeshes(meshes, {includeNormal: false});
+		const intersects: Array<Instance & { hit: any }> = state.raycaster.intersectMeshes(meshes, {includeNormal: false});
 
 		// Used to discern between generic events and custom hover events.
 		// We hijack the pointermove event to handle hover state
@@ -29,7 +29,10 @@ export const createEvents = (state: RootState) => {
 
 		// Trigger events for hovered elements
 		intersects.forEach((object) => {
+
 			const handlers = object.__handlers;
+
+			(event as any).hit = object.hit;
 
 			// Bail if object doesn't have handlers (managed externally)
 			if (!handlers) return;

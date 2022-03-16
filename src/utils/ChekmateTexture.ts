@@ -1,6 +1,6 @@
 import { Texture } from "ogl";
 
-function generateCheckmate (width = 256, height = 256, count = 4) {
+export function generateCheckmate (width = 256, height = 256, count = 4) {
 	const grid = document.createElement('canvas');
 	grid.width = width;
 	grid.height = height;
