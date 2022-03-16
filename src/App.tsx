@@ -16,7 +16,7 @@ const Scene = () => {
 	return (
 		<transform position={[0, 1.6, 0]}>
 			<Layer3D key="grid" width={4} height={2}>
-				<CanvasFrame />
+				<CanvasFrame width={1024} height={512}  />
 			</Layer3D>
 			<Layer3D
 				key="left"
@@ -26,7 +26,7 @@ const Scene = () => {
 				anchor={[0.5, 0]}
 				rotation={[0, Math.PI / 6, 0]}
 			>
-				<CanvasFrame />
+				<CanvasFrame width={256} height={512} />
 			</Layer3D>
 			<Layer3D
 				key="right"
@@ -36,7 +36,7 @@ const Scene = () => {
 				anchor={[-0.5, 0]}
 				rotation={[0, -Math.PI / 6, 0]}
 			>
-				<CanvasFrame />
+				<CanvasFrame width={256} height={512} />
 			</Layer3D>
 		</transform>
 	);

@@ -23,10 +23,6 @@ export default ({
 		).uPoint.value = hit?.uv || [0, 0];
 	};
 
-	useEffect(() => {
-		console.log(programRef);
-	});
-
 	return (
 		<transform rotation={rotation} position={position} ref={transformRef}>
 			<mesh

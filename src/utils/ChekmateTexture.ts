@@ -1,6 +1,6 @@
 import { Texture } from "ogl";
 
-export function generateCheckmate (width = 256, height = 256, count = 4) {
+export function generateCheckmate (width = 256, height = 256, step = 64, count = null) {
 	const grid = document.createElement('canvas');
 	grid.width = width;
 	grid.height = height;
@@ -9,12 +9,15 @@ export function generateCheckmate (width = 256, height = 256, count = 4) {
 
 	gridCtx.fillStyle = 'black';
 
-	const sx = width / count | 0;
-	const sy = height / count | 0;
+	const countX = count || width / step | 0;
+	const countY = count || height / step | 0;
 
-	for(let i = 0; i < count * count; i+=2) {
-		const yi = (i / count | 0);
-		const xi = (i % count + yi % 2);
+	const sx = width / countX | 0;
+	const sy = height / countY | 0;
+
+	for(let i = 0; i < countY * countX; i+=2) {
+		const yi = (i / countX | 0);
+		const xi = (i % countX + yi % 2);
 
 		gridCtx.fillRect(
 			xi * sx, yi * sy, sx, sy
