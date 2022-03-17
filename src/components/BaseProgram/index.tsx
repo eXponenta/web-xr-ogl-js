@@ -87,6 +87,12 @@ export class BaseProgramWithTexture extends Program {
 		};
 	}
 
+	use(options: any): void {
+		this.update();
+
+		super.use(options);
+	}
+
 	set texture(v) {
 		this.uniforms.uSampler0 = { value: v };
 		this.update();
@@ -112,18 +118,9 @@ declare global {
 
 export default React.forwardRef<Program, IProgProps>(
 	function BaseProgWithTexture({ children }, ref) {
-
-		const [state, setState] = useState(false);
-
-		const update = () => {
-			setState(!state);
-		};
-
 		return (
-			<baseProgramWithTexture ref={ref} needUpdate = {state}>
-				{React.Children.map(children, (e) =>
-					React.cloneElement(e, { update })
-				)}
+			<baseProgramWithTexture ref={ref}>
+				{children}
 			</baseProgramWithTexture>
 		);
 	}
