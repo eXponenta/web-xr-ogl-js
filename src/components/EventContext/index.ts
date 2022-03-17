@@ -13,7 +13,8 @@ export interface IHitRegion {
  */
 export function createMappedEvent(
 	{ event, hit }: IEventPair<PointerEvent>,
-	region: IHitRegion
+	region: IHitRegion,
+	overrides?: PointerEventInit & {type?: string}
 ) {
 	if (!hit?.uv) {
 		throw new Error(
@@ -23,7 +24,7 @@ export function createMappedEvent(
 
 	const { uv: localPos } = hit;
 
-	const dict: PointerEventInit = {};
+	const dict: PointerEventInit & { type?: string} = {};
 
 	for (const key in event) {
 		// skip functions
@@ -32,19 +33,20 @@ export function createMappedEvent(
 		}
 
 		// clone values
-		dict[key] = event[key];
+		dict[key] = overrides?.[key] || event[key];
 	}
+
 
 	// overwrite event
 	dict.clientX = localPos[0] * region.width;
-	dict.clientY = localPos[1] * region.height;
+	dict.clientY = (1 - localPos[1]) * region.height;
 	dict.screenX = dict.clientX;
 	dict.screenY = dict.clientY;
 
 	const Ctor: typeof PointerEvent = event.constructor as typeof PointerEvent;
 
 	// clone with new props
-	const newEvent = new Ctor(event.type, dict) as PointerEvent & {
+	const newEvent = new Ctor(dict.type, dict) as PointerEvent & {
 		original: PointerEvent;
 		hit: IHitResult;
 		hitRegion: IHitRegion;

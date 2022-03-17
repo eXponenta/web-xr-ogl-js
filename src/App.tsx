@@ -4,7 +4,7 @@ import { useFrame, Canvas, useOGL } from "react-ogl/web";
 import { XRRenderer } from "./xr/XRRenderer";
 import { events } from "./utils/events";
 import Layer3D from "./components/Layer3D";
-import CanvasFrame from "./components/CanvasFrame";
+import CanvasDebugFrame from "./components/CanvasDebugFrame";
 
 const Scene = () => {
 	const state = useOGL();
@@ -16,7 +16,7 @@ const Scene = () => {
 	return (
 		<transform position={[0, 1.6, 0]}>
 			<Layer3D label="grid" width={4} height={2}>
-				<CanvasFrame width={1024} height={512}  />
+				<CanvasDebugFrame width={1024} height={512}  />
 			</Layer3D>
 			<Layer3D
 				label="left"
@@ -26,7 +26,7 @@ const Scene = () => {
 				anchor={[0.5, 0]}
 				rotation={[0, Math.PI / 6, 0]}
 			>
-				<CanvasFrame width={256} height={512} />
+				<CanvasDebugFrame width={256} height={512} />
 			</Layer3D>
 			<Layer3D
 				label="right"
@@ -36,7 +36,7 @@ const Scene = () => {
 				anchor={[-0.5, 0]}
 				rotation={[0, -Math.PI / 6, 0]}
 			>
-				<CanvasFrame width={256} height={512} />
+				<CanvasDebugFrame width={256} height={512} />
 			</Layer3D>
 		</transform>
 	);

@@ -52,8 +52,8 @@ export default function Layer3D({
 	}, [pixelWidth, pixelWidth, children])
 
 
-	const reDespath = (e: IEventPair<PointerEvent>) => {
-		eventTarget.dispatchEvent(createMappedEvent(e, { width: pixelWidth, height: pixelHeight }));
+	const reDespath = (e: IEventPair<PointerEvent>, overrides?: any) => {
+		eventTarget.dispatchEvent(createMappedEvent(e, hitRegion, overrides));
 	}
 
 	const handleMove = (e: IEventPair<PointerEvent>) => {
@@ -65,15 +65,19 @@ export default function Layer3D({
 	};
 
 	const handleOver = (e: IEventPair<PointerEvent>) => {
+
 		setHover(true);
 
-		reDespath(e);
+		// fiber event fire 'pointermove', change it
+		reDespath(e, {type: 'pointerover' });
 	};
 
 	const handleOut = (e: IEventPair<PointerEvent>) => {
+
 		setHover(false);
 
-		reDespath(e);
+		// fiber event fire 'pointermove', change it
+		reDespath(e, {type: 'pointerout'});
 	};
 
 
@@ -84,6 +88,7 @@ export default function Layer3D({
 				onPointerOver={handleOver}
 				onPointerOut={handleOut}
 				onPointerMove={handleMove}
+				onPointerDown={reDespath}
 				ref={meshRef}
 			>
 				<EventContextForwarder.Provider value={eventTarget}>

@@ -1,7 +1,8 @@
 import { Program } from "ogl";
 import { extend, Node } from "react-ogl";
+import mergeRefs from "react-merge-refs";
 
-import React, { ReactElement } from "react";
+import React, { useRef, useState } from "react";
 
 const FRAG = `
 precision highp float;
@@ -23,7 +24,6 @@ void main() {
 	float marker = 0.0;
 
 	marker = max(step(length(dist), 0.01), marker);
-
 	marker = max(marker, step(abs(dist.x), 0.002));
 	marker = max(marker, step(abs(dist.y), 0.002));
 
@@ -71,11 +71,17 @@ export class BaseProgramWithTexture extends Program {
 		});
 	}
 
-	set texture(v) {
-		this.uniforms.uSampler0 = { value: v };
+	update() {
+		const v = this.uniforms.uSampler0?.value;
+
 		this.uniforms.uSampler0Size = {
 			value: v.image ? [v.image.width, v.image.height] : [1, 1],
 		};
+	}
+
+	set texture(v) {
+		this.uniforms.uSampler0 = { value: v };
+		this.update();
 	}
 
 	get texture() {
@@ -98,9 +104,18 @@ declare global {
 
 export default React.forwardRef<Program, IProgProps>(
 	function BaseProgWithTexture({ children }, ref) {
+
+		const [state, setState] = useState(false);
+
+		const update = () => {
+			setState(!state);
+		};
+
 		return (
 			<baseProgramWithTexture ref={ref}>
-				{children}
+				{React.Children.map(children, (e) =>
+					React.cloneElement(e, { update })
+				)}
 			</baseProgramWithTexture>
 		);
 	}
