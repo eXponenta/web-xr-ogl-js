@@ -1,7 +1,7 @@
 import { Program } from "ogl";
 import { extend, Node } from "react-ogl";
 
-import React from "react";
+import React, { ReactElement } from "react";
 
 const FRAG = `
 precision highp float;
@@ -97,10 +97,7 @@ declare global {
 }
 
 export default React.forwardRef<Program, IProgProps>(
-	function BaseProgWithTexture(
-		{ color = "pink", mousePoint = [0, 0], children },
-		ref
-	) {
+	function BaseProgWithTexture({ children }, ref) {
 		return (
 			<baseProgramWithTexture ref={ref}>
 				{children}

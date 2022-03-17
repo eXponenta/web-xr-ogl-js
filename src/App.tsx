@@ -15,11 +15,11 @@ const Scene = () => {
 
 	return (
 		<transform position={[0, 1.6, 0]}>
-			<Layer3D key="grid" width={4} height={2}>
+			<Layer3D label="grid" width={4} height={2}>
 				<CanvasFrame width={1024} height={512}  />
 			</Layer3D>
 			<Layer3D
-				key="left"
+				label="left"
 				width={1}
 				height={2}
 				position={[-2, 0, 0]}
@@ -29,7 +29,7 @@ const Scene = () => {
 				<CanvasFrame width={256} height={512} />
 			</Layer3D>
 			<Layer3D
-				key="right"
+				label="right"
 				width={1}
 				height={2}
 				position={[2, 0, 0]}
