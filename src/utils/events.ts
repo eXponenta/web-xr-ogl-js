@@ -32,8 +32,6 @@ export const createEvents = (state: RootState) => {
 
 			const handlers = object.__handlers;
 
-			(event as any).hit = object.hit;
-
 			// Bail if object doesn't have handlers (managed externally)
 			if (!handlers) return;
 
@@ -42,11 +40,11 @@ export const createEvents = (state: RootState) => {
 				state.hovered.set(object.id, object);
 
 				// Fire hover events
-				handlers.onPointerMove?.(event);
-				handlers.onPointerOver?.(event);
+				handlers.onPointerMove?.({event, hit: object.hit});
+				handlers.onPointerOver?.({event, hit: object.hit});
 			} else {
 				// Otherwise, fire its generic event
-				handlers[type]?.(event);
+				handlers[type]?.({event, hit: object.hit});
 			}
 		});
 
@@ -63,7 +61,7 @@ export const createEvents = (state: RootState) => {
 					state.hovered.delete(object.id);
 
 					// Fire unhover event
-					if (handlers?.onPointerOut) handlers.onPointerOut(event);
+					if (handlers?.onPointerOut) handlers.onPointerOut({event, hit: object.hit});
 				}
 			});
 		}

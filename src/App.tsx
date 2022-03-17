@@ -50,7 +50,6 @@ export default React.forwardRef<HTMLCanvasElement, {}>(
 			<Canvas
 				camera={{ position: [0, 1.6, 4] }}
 				ref={mergeRefs([forwardRef, ref])}
-				events={events}
 				renderer={() =>
 					new XRRenderer({
 						canvas: ref,

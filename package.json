@@ -24,7 +24,7 @@
     "ogl": "0.0.86",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
-    "react-ogl": "0.0.8",
+    "react-ogl": "^0.1.1",
     "react-reconciler": "^0.26.2",
     "webxr-layers-polyfill": "^1.0.2"
   }

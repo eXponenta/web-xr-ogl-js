@@ -1,7 +1,8 @@
 import { Mesh, Program, Transform } from "ogl";
 import { useEffect, useRef, useState } from "react";
+import { IEventPair } from "react-ogl";
 import BaseProgram from "../BaseProgram";
-import { EventContextForwarder } from "../EventContext";
+import { createMappedEvent, EventContextForwarder } from "../EventContext";
 
 export default function Layer3D({
 	anchor = [0, 0],
@@ -9,6 +10,8 @@ export default function Layer3D({
 	height = 1,
 	position = [0, 0, 0],
 	rotation = [0, 0, 0],
+	pixelWidth = width * 100,
+	pixelHeight = height * 100,
 	children,
 	...props
 }) {
@@ -20,14 +23,11 @@ export default function Layer3D({
 
 	const programRef = useRef<Program>();
 
-	const reDespath = (e: Event & {hit: any}) => {
-		const newEvent = new (e.constructor as any)(e.type, e);
-		newEvent.hit = e.hit;
-
-		eventTarget.dispatchEvent(newEvent);
+	const reDespath = (e: IEventPair<PointerEvent>) => {
+		eventTarget.dispatchEvent(createMappedEvent(e, { width: pixelWidth, height: pixelHeight }));
 	}
 
-	const handleMove = (e: PointerEvent & {hit: any}) => {
+	const handleMove = (e: IEventPair<PointerEvent>) => {
 		(
 			programRef.current.uniforms as Record<string, { value: any }>
 		).uPoint.value = e.hit?.uv || [0, 0];
@@ -35,13 +35,13 @@ export default function Layer3D({
 		reDespath(e)
 	};
 
-	const handleOver = (e: PointerEvent & {hit: any}) => {
+	const handleOver = (e: IEventPair<PointerEvent>) => {
 		setHover(true);
 
 		reDespath(e);
 	};
 
-	const handleOut = (e: PointerEvent & {hit: any}) => {
+	const handleOut = (e: IEventPair<PointerEvent>) => {
 		setHover(false);
 
 		reDespath(e);
