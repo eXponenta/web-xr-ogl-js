@@ -71,8 +71,16 @@ export class BaseProgramWithTexture extends Program {
 		});
 	}
 
+	set needUpdate (v: boolean) {
+		this.update();
+	}
+
 	update() {
 		const v = this.uniforms.uSampler0?.value;
+
+		if (!v) {
+			return;
+		}
 
 		this.uniforms.uSampler0Size = {
 			value: v.image ? [v.image.width, v.image.height] : [1, 1],
@@ -112,7 +120,7 @@ export default React.forwardRef<Program, IProgProps>(
 		};
 
 		return (
-			<baseProgramWithTexture ref={ref}>
+			<baseProgramWithTexture ref={ref} needUpdate = {state}>
 				{React.Children.map(children, (e) =>
 					React.cloneElement(e, { update })
 				)}
