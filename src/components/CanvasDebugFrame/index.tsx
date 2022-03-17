@@ -18,9 +18,9 @@ export default function CanvasDebugFrameTexture ({width = 256, height = 256, ste
 		}
 
 		function onPointerMove({clientX, clientY, buttons}: PointerEvent) {
-			const ctx = image.getContext('2d');
+			const ctx = image?.getContext('2d');
 
-			if (buttons <= 0) {
+			if (buttons <= 0 || !ctx) {
 				last = null;
 				return;
 			}
@@ -52,7 +52,11 @@ export default function CanvasDebugFrameTexture ({width = 256, height = 256, ste
 		}
 
 		function onPointerDown({clientX, clientY}: PointerEvent) {
-			const ctx = image.getContext('2d');
+			const ctx = image?.getContext('2d');
+
+			if (!ctx) {
+				return;
+			}
 
 			ctx.save();
 
