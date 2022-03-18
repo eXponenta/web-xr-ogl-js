@@ -7,7 +7,8 @@
     "prebuild": "rimraf ./dist/",
     "build": "webpack --config webpack.config.js --mode=development",
     "release": "webpack --config webpack.config.js --mode=production",
-    "build-react": "webpack --config webpack.config.react.js --mode=development",
+    "release-react": "webpack --config webpack.config.react.js --mode=production",
+    "build-react": "webpack server --config webpack.config.react.js --mode=development",
     "serve": "http-server -c-1 -p 1011 -S -K ./keys/key.pem -C ./keys/cert.pem ./dist"
   },
   "devDependencies": {
@@ -18,7 +19,8 @@
     "ts-loader": "^9.2.6",
     "typescript": "^4.5.5",
     "webpack": "^5.69.1",
-    "webpack-cli": "^4.9.2"
+    "webpack-cli": "^4.9.2",
+    "webpack-dev-server": "^4.7.4"
   },
   "dependencies": {
     "ogl": "0.0.86",

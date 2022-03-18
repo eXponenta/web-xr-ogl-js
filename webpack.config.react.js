@@ -24,4 +24,26 @@ module.exports = {
 			patterns: [{ context: "static/", from: "**/*" }],
 		}),
 	],
+	devtool: 'inline-source-map',
+	devServer: {
+		server: {
+			type: 'https',
+			options: {
+			  key: './keys/key.pem',
+			  cert: './keys/cert.pem',
+			  requestCert: false,
+			},
+		},
+		static: {
+			directory: path.join(__dirname, 'public'),
+		},
+		client: {
+			overlay: {
+				errors: true,
+				warnings: false,
+			},
+		},
+		compress: true,
+		port: 1011,
+	},
 };
