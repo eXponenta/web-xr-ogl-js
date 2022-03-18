@@ -89,12 +89,7 @@ export default function CanvasDebugFrameTexture ({width = 256, height = 256, ste
 	}, [context, image])
 
 	useEffect(() => {
-
-		const image = generateCheckmate(width, height, step);
-		document.body.appendChild(image);
-
-		setImage(image);
-
+		setImage(generateCheckmate(width, height, step));
 	}, [width, height, step])
 
 	useEffect(()=>{
