@@ -89,14 +89,14 @@ import { XRRenderer } from "./xr/XRRenderer";
 
 		// oculus has resynced frames, lol
 		// and stop RAF from window before accept session
-		renderer.requestAnimatioFrame(update);
+		renderer.requestAnimationFrame(update);
 
 
 		renderer.xr.session.addEventListener('end', () => {
 			setTimeout(()=>{
 				// oculus has resynced frames, lol
 				// and stop RAF from window before accept session
-			renderer.requestAnimatioFrame(update);
+			renderer.requestAnimationFrame(update);
 			});
 		})
 	});
@@ -130,14 +130,14 @@ import { XRRenderer } from "./xr/XRRenderer";
 	cylinder.position.set(-1.3, 0, 0);
 	cylinder.setParent(scene);
 
-	renderer.requestAnimatioFrame(update);
+	renderer.requestAnimationFrame(update);
 	/**
 	 *
 	 * @param {number} time
 	 * @param {import('webxr').XRFrame} [frame]
 	 */
 	function update(time, frame = null) {
-		renderer.requestAnimatioFrame(update);
+		renderer.requestAnimationFrame(update);
 
 		updateText();
 

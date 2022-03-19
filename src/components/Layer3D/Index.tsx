@@ -96,7 +96,7 @@ export default function Layer3D({
 	};
 
 	return (
-		<transform rotation={rotation} position={position} ref={transformRef}>
+		<transform rotation={rotation as any} position={position as any} ref={transformRef}>
 			<mesh
 				position={[-width * anchor[0], -height * anchor[1], 0]}
 				onPointerOver={mergeEvents([handleOver, onPointerOver])}
@@ -109,7 +109,7 @@ export default function Layer3D({
 				ref={meshRef}
 			>
 				<EventContextForwarder.Provider value={eventTarget}>
-					<plane width={width} height={height} />
+					<plane {...{width, height} as any} />
 					<BaseProgram
 						ref={programRef}
 						color={hovered ? "hotpink" : "green"}

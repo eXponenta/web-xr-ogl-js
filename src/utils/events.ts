@@ -15,7 +15,7 @@ export const createEvents = (state: RootState) => {
 		state.raycaster.castMouse(state.camera, state.mouse);
 
 		const meshes: Array<OGL.Mesh> = [];
-		state.scene.traverse((child: OGL.Mesh) => {
+		state.scene.traverse((child: any) => {
 			if (child?.geometry?.attributes?.position) {
 				meshes.push(child as OGL.Mesh);
 			}

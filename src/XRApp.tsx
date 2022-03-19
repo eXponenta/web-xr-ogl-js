@@ -6,12 +6,13 @@ import Layer3D from "./components/Layer3D";
 import CanvasDebugFrame from "./components/CanvasDebugFrame";
 import { BaseAppContext } from "./BaseAppContext";
 import { LinkWrap, Route } from "./components/Router";
+import { mergeCallbacks } from "./utils/mergeCallback";
 
 const Scene = ({ visible }: { visible?: boolean }) => {
 	const state = useOGL();
 
 	useFrame(() => {
-		(state.renderer as XRRenderer).gl.clearColor(1, 1, 1, 1);
+		(state.renderer as any as XRRenderer).gl.clearColor(1, 1, 1, 1);
 	});
 
 	const baseAppContext = useContext(BaseAppContext);
@@ -21,7 +22,7 @@ const Scene = ({ visible }: { visible?: boolean }) => {
 	}, []);
 
 	return (
-		<transform position={[0, 1.6, 0]} visible={visible}>
+		<transform position={[0, 1.6, 0] as any} visible={visible}>
 			<LinkWrap href="/">
 				<Layer3D
 					label="grid"
@@ -65,6 +66,35 @@ export interface IXRAppProps {
 	visible?: boolean;
 }
 
+const createRenderer = (canvas: HTMLCanvasElement) =>
+	new XRRenderer({
+		canvas,
+		dpr: 2,
+		antialias: true,
+		autoClear: true,
+	});
+
+const createRendererContext = (state: RootState) => {
+	const {
+		renderer,
+		subscribed,
+		camera,
+		scene
+	} = state;
+
+	const animate = (time?: number, frame?: any) => {
+		state.animation = (renderer as any as XRRenderer).requestAnimationFrame(animate)
+
+		// Call subscribed elements
+		subscribed.forEach((ref: any) => ref.current?.(state, time))
+
+		// Render to screen
+		renderer.render({ scene, camera })
+	}
+
+	state.animation = (renderer as any as XRRenderer).requestAnimationFrame(animate);
+};
+
 export default React.forwardRef<HTMLCanvasElement, IXRAppProps>(function XRApp(
 	{ onCreated, visible },
 	forwardRef
@@ -73,17 +103,11 @@ export default React.forwardRef<HTMLCanvasElement, IXRAppProps>(function XRApp(
 
 	return (
 		<Canvas
-			onCreated={onCreated}
+			onCreated={mergeCallbacks([createRendererContext, onCreated])}
 			camera={{ position: [0, 1.6, 4] }}
 			ref={mergeRefs([forwardRef, ref])}
-			renderer={() =>
-				new XRRenderer({
-					canvas: ref,
-					dpr: 2,
-					antialias: true,
-					autoClear: true,
-				})
-			}
+			renderer={createRenderer}
+			frameloop='never'
 		>
 			<Scene visible={visible} />
 		</Canvas>

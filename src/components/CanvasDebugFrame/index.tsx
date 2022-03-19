@@ -96,5 +96,5 @@ export default function CanvasDebugFrameTexture ({width = 256, height = 256, ste
 		update && update();
 	},[image])
 
-	return <texture image = {image} ref = {selfRef} attach = {'texture'}/>
+	return <texture {...{image} as any} ref = {selfRef} attach = {'texture'}/>
 }
