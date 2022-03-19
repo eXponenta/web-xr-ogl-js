@@ -39,7 +39,7 @@ export interface ISessionRequest {
 interface XRStateEventMap {
 	xrend: CustomEvent<never>;
 	xrstart: CustomEvent<XRState>;
-	inputsourceschange: CustomEvent<XRInputSourceArray>;
+	xrinputsourceschange: CustomEvent<XRInputSourceArray>;
 }
 
 export class XRState extends EventTarget {
@@ -294,6 +294,8 @@ export class XRRenderer extends Renderer {
 	};
 
 	readonly xr: XRState;
+	readonly attrs: WebGLContextAttributes;
+
 	layers: OGLXRLayer<XRCompositionLayer>[] = [];
 
 	_rafCallbacks: Map<number, TRafCallback> = new Map();
@@ -309,6 +311,8 @@ export class XRRenderer extends Renderer {
 
 		this.xr.addEventListener("xrend", this.onSessionLost.bind(this));
 		this.xr.addEventListener("xrstart", this.onSessionStart.bind(this));
+
+		this.attrs = this.gl.getContextAttributes();
 	}
 
 	_internalLoop(time?: number, frame?: XRFrame) {
@@ -510,7 +514,7 @@ export class XRRenderer extends Renderer {
 				target = baseLayerTarget;
 
 				if (i === 0) {
-					baseLayerTarget.attach(glSubImage, true);
+					baseLayerTarget.attach(glSubImage, this.attrs.antialias);
 				}
 			}
 

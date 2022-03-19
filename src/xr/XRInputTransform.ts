@@ -43,8 +43,13 @@ export class XRInputTransform extends Transform {
 
 		const pose = lastXRFrame.getPose(this._source.gripSpace, space);
 
+		if (!pose) {
+			return;
+		}
+
 		this.worldMatrix.copy(pose.transform.matrix as any);
 
-		this.updateMatrixWorld(true);
+		this.worldMatrixNeedsUpdate = true;
+		//this.updateMatrixWorld(true);
 	}
 }
