@@ -45,13 +45,14 @@ export class XRState {
 	static async requestSession(
 		context: XRRenderer,
 		{
-		mode = "immersive-vr",
-		space = "local-floor",
-		options = {
-			requiredFeatures: ["local-floor"],
-			optionalFeatures: ["layers"],
-		},
-	}: ISessionRequest = {}) {
+			mode = "immersive-vr",
+			space = "local-floor",
+			options = {
+				requiredFeatures: ["local-floor"],
+				optionalFeatures: ["layers"],
+			},
+		}: ISessionRequest = {}
+	) {
 		const state = new XRState();
 
 		if (!state.session) {
@@ -82,7 +83,9 @@ export class XRState {
 		if (XRState.layersSupport) {
 			this.session.updateRenderState({ layers: this.layers });
 		} else {
-			this.session.updateRenderState({ baseLayer: this.baseLayer as XRWebGLLayer });
+			this.session.updateRenderState({
+				baseLayer: this.baseLayer as XRWebGLLayer,
+			});
 		}
 	}
 
@@ -91,8 +94,11 @@ export class XRState {
 		type: "base" | "cube" | "quad" | "sphere" = "base",
 		options: any = {}
 	): XRCompositionLayer | XRWebGLLayer {
-
-		options = Object.assign({}, { space: this.space, viewPixelHeight: 100, viewPixelWidth: 100 }, options);
+		options = Object.assign(
+			{},
+			{ space: this.space, viewPixelHeight: 100, viewPixelWidth: 100 },
+			options
+		);
 
 		if (
 			!XRState.layersSupport &&
@@ -125,7 +131,9 @@ export class XRState {
 					break;
 				}
 				case "quad": {
-					layer = this.glBinding.createQuadLayer(options as IQuadLayerInit);
+					layer = this.glBinding.createQuadLayer(
+						options as IQuadLayerInit
+					);
 					break;
 				}
 				default:
@@ -141,14 +149,18 @@ export class XRState {
 		return layer;
 	}
 
-	requestAnimatioFrame(callback) {
-		return this.session.requestAnimationFrame((time, frame) => {
+	requestAnimationFrame(callback) {
+		const loopid = this.session.requestAnimationFrame((time, frame) => {
 			this.lastXRFrame = frame;
 
 			callback(time, frame);
 
 			this.lastXRFrame = null;
 		});
+
+		return () => {
+			this.session?.cancelAnimationFrame(loopid);
+		};
 	}
 
 	end() {
@@ -156,7 +168,7 @@ export class XRState {
 	}
 
 	destroy() {
-		for(const layer of this.layers as XRCompositionLayer[]) {
+		for (const layer of this.layers as XRCompositionLayer[]) {
 			layer.destroy && layer.destroy();
 		}
 
@@ -164,10 +176,8 @@ export class XRState {
 	}
 }
 
+type TRafCallback = (time: number, frame?: XRFrame) => void;
 export class XRRenderer extends Renderer {
-	xr: XRState = null;
-	layers: OGLXRLayer<XRCompositionLayer>[] = [];
-
 	static layersCtors: Record<
 		"cube" | "quad" | "sphere",
 		new (context: XRRenderer, ...any: any[]) => OGLXRLayer
@@ -177,8 +187,45 @@ export class XRRenderer extends Renderer {
 		quad: OGLQuadLayer,
 	};
 
+	xr: XRState = null;
+	layers: OGLXRLayer<XRCompositionLayer>[] = [];
+
+	_rafCallbacks: Map<number, TRafCallback> = new Map();
+	_calbackID: number = 0;
+	_clearLoopDel: () => void = null;
+
 	constructor(options) {
 		super(options);
+
+		this._internalLoop = this._internalLoop.bind(this);
+	}
+
+	_internalLoop(time?: number, frame?: XRFrame) {
+		const callbacks = [...this._rafCallbacks.values()];
+
+		this._rafCallbacks.clear();
+
+		callbacks.forEach((c) => c(time, frame));
+
+		this._attachLoop();
+	}
+
+	_clearLoop() {
+		this._clearLoopDel?.();
+		this._clearLoopDel = null;
+	}
+
+	_attachLoop() {
+		if (this.xr) {
+			this._clearLoopDel = this.xr.requestAnimationFrame(this._internalLoop);
+			return;
+		}
+
+		const id = window.requestAnimationFrame(this._internalLoop);
+
+		this._clearLoopDel = () => {
+			window.cancelAnimationFrame(id);
+		};
 	}
 
 	createLayer<T extends XRCompositionLayer = XRCompositionLayer>(
@@ -202,7 +249,11 @@ export class XRRenderer extends Renderer {
 		let nativeLayer: XRCompositionLayer;
 
 		if (XRState.layersSupport) {
-			nativeLayer = this.xr.getLayer(this.gl, type, options) as XRCompositionLayer;
+			nativeLayer = this.xr.getLayer(
+				this.gl,
+				type,
+				options
+			) as XRCompositionLayer;
 		}
 
 		layer.bindLayer(nativeLayer);
@@ -222,6 +273,8 @@ export class XRRenderer extends Renderer {
 	}
 
 	onSessionLost() {
+		this._clearLoop();
+
 		this.xr.destroy();
 
 		for (const layer of this.layers) {
@@ -234,6 +287,9 @@ export class XRRenderer extends Renderer {
 		this.xr = null;
 		this.layers = [];
 
+		// rerun render loop
+		this._attachLoop();
+
 		console.warn("XR Session end");
 	}
 
@@ -244,22 +300,36 @@ export class XRRenderer extends Renderer {
 
 		await this.gl.makeXRCompatible();
 
-		this.xr = await XRState.requestSession(this, options);
+		this._clearLoop();
+
+		try {
+			this.xr = await XRState.requestSession(this, options);
+		} finally {
+			this._attachLoop();
+		}
 
 		// must be, because we should render
 		this.xr.getLayer(this.gl, "base");
 
-		this.xr.session.addEventListener('end', this.onSessionLost.bind(this));
+		this.xr.session.addEventListener("end", this.onSessionLost.bind(this));
 
 		return this.xr;
 	}
 
-	requestAnimatioFrame(callback) {
-		if (this.xr) {
-			return this.xr.requestAnimatioFrame(callback);
+	requestAnimationFrame(callback: TRafCallback) {
+		const id = this._calbackID++;
+
+		this._rafCallbacks.set(id, callback);
+
+		if (!this._clearLoopDel) {
+			this._attachLoop();
 		}
 
-		return self.requestAnimationFrame(callback);
+		return id;
+	}
+
+	cancelAnimationFrame(id: number) {
+		this._rafCallbacks.delete(id);
 	}
 
 	setViewportUnchecked({ width, height, x = 0, y = 0 }) {
@@ -270,9 +340,9 @@ export class XRRenderer extends Renderer {
 		this.gl.viewport(x, y, width, height);
 	}
 
-	bind2DTextureDirect (texture: WebGLTexture) {
+	bind2DTextureDirect(texture: WebGLTexture) {
 		this.gl.bindTexture(this.gl.TEXTURE_2D, texture);
-        this.state.textureUnits[this.state.activeTextureUnit] = -1;
+		this.state.textureUnits[this.state.activeTextureUnit] = -1;
 	}
 
 	renderXR(options) {
@@ -284,7 +354,8 @@ export class XRRenderer extends Renderer {
 
 		const camera = options.camera;
 
-		const { lastXRFrame, space, baseLayer, glBinding, baseLayerTarget } = xr;
+		const { lastXRFrame, space, baseLayer, glBinding, baseLayerTarget } =
+			xr;
 		const poses = lastXRFrame.getViewerPose(space);
 
 		if (!poses) {
@@ -308,12 +379,15 @@ export class XRRenderer extends Renderer {
 					height: viewport.height,
 				};
 			} else {
-				const glSubImage = glBinding.getViewSubImage( baseLayer as XRCompositionLayer, view );
+				const glSubImage = glBinding.getViewSubImage(
+					baseLayer as XRCompositionLayer,
+					view
+				);
 
 				viewport = glSubImage.viewport;
 				target = baseLayerTarget;
 
-				if ( i === 0 ) {
+				if (i === 0) {
 					baseLayerTarget.attach(glSubImage, true);
 				}
 			}
@@ -349,13 +423,12 @@ export class XRRenderer extends Renderer {
 		this.bindFramebuffer();
 
 		this.layers.forEach((e) => {
-			if (e === baseLayer as any) {
+			if (e === (baseLayer as any)) {
 				return;
 			}
 
 			e.update(lastXRFrame);
 		});
-
 	}
 
 	render(options) {
