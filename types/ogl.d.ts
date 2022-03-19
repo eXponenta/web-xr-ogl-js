@@ -4,8 +4,13 @@
 
 type GLContext = WebGL2RenderingContext | WebGLRenderingContext;
 
-declare module 'ogl' {
-	type IImageSource = HTMLImageElement | ArrayBuffer | ArrayBufferView | HTMLCanvasElement | ImageBitmap;
+declare module "ogl" {
+	type IImageSource =
+		| HTMLImageElement
+		| ArrayBuffer
+		| ArrayBufferView
+		| HTMLCanvasElement
+		| ImageBitmap;
 	type ICameraInit = ICameraPerspectiveInit | ICameraOrthoInit;
 
 	type IVec3Arr = [number, number, number];
@@ -33,15 +38,13 @@ declare module 'ogl' {
 			y: number;
 			width: number;
 			height: number;
-		}
+		};
 
 		textureUnits: Array<any>;
 		activeTextureUnit: number;
 	}
 
-	interface IRenderTarget {
-
-	}
+	interface IRenderTarget {}
 
 	interface RendererOptions {
 		canvas?: HTMLCanvasElement;
@@ -76,12 +79,12 @@ declare module 'ogl' {
 		transparent?: boolean;
 		cullFace?: number;
 		frontFace?: number;
-		depthTest?: boolean
+		depthTest?: boolean;
 		depthWrite?: boolean;
 		depthFunc?: boolean;
 	}
 
-	interface ITextureOptions <T extends IImageSource> {
+	interface ITextureOptions<T extends IImageSource> {
 		image?: T;
 		target?: number;
 		type?: number;
@@ -113,7 +116,7 @@ declare module 'ogl' {
 
 		constructor(x?: number, y?: number, z?: number);
 
-		set (x?: number, y?: number, z?: number): this;
+		set(x?: number, y?: number, z?: number): this;
 	}
 
 	class Quat extends Array<number> {
@@ -131,7 +134,7 @@ declare module 'ogl' {
 
 		constructor(x?: number, y?: number, z?: number, w?: number);
 
-		set (x?: number, y?: number, z?: number, w?: number): this;
+		set(x?: number, y?: number, z?: number, w?: number): this;
 	}
 
 	class Euler extends Array<[number, number, number]> {
@@ -144,23 +147,28 @@ declare module 'ogl' {
 		set z(v: number);
 		get z(): number;
 
-		constructor (x?: number, y?: number, z?: number, order?: 'YXZ');
+		constructor(x?: number, y?: number, z?: number, order?: "YXZ");
 	}
 
 	class Mat4 extends Array<number> {
-		getRotation(q: Quat):  this;
+		copy(source: Mat4): this;
+		multiply(left: Mat4, right: Mat4): this;
+		getRotation(q: Quat): this;
 		getTranslation(v: Vec3): this;
 		getScaling(v: Vec3): this;
 	}
 
 	class Renderer {
-		readonly gl: GLContext & {canvas: HTMLCanvasElement, renderer: Renderer};
+		readonly gl: GLContext & {
+			canvas: HTMLCanvasElement;
+			renderer: Renderer;
+		};
 		readonly state: IRendererState;
 		readonly dpr: number;
 		readonly alpha: boolean;
 		readonly color: boolean;
 		readonly depth: boolean;
-	 	readonly stencil: boolean;
+		readonly stencil: boolean;
 		readonly premultipliedAlpha: boolean;
 		readonly isWebgl2: boolean;
 
@@ -168,13 +176,16 @@ declare module 'ogl' {
 		width: number;
 		height: number;
 
-		constructor (options: any);
+		constructor(options: any);
 
-		render (options: IRenderTaskOptions);
+		render(options: IRenderTaskOptions);
 
-		setSize (width: number, height: number);
+		setSize(width: number, height: number);
 
-		bindFramebuffer (framebufferLike?: {target?: number, buffer?: WebGLFramebuffer}): void;
+		bindFramebuffer(framebufferLike?: {
+			target?: number;
+			buffer?: WebGLFramebuffer;
+		}): void;
 	}
 
 	class Transform {
@@ -183,22 +194,32 @@ declare module 'ogl' {
 		readonly position: Vec3;
 		readonly rotation: Euler;
 		readonly quaternion: Quat;
+		readonly children: Transform[];
 
-		constructor ();
+		visible: boolean;
+		worldMatrixNeedsUpdate: boolean;
+		matrixAutoUpdate: boolean;
+		parent: Transform;
+
+		constructor();
 
 		lookAt(vec3: IVec3Arr | Vec3, invert?: boolean): this;
 
 		setParent(node: Transform, notifyParent?: boolean): void;
 
-		addChild(node: Transform, notifyChild?: boolean): void
+		addChild(node: Transform, notifyChild?: boolean): void;
 
-		removeChild(node: Transform, notifyChild?: boolean): void
+		removeChild(node: Transform, notifyChild?: boolean): void;
 
-		updateMatrixWorld (force?: boolean): void;
+		updateMatrixWorld(force?: boolean): void;
+
+		updateMatrix(): void;
+
+		traverse(callback: (node: Transform) => true | undefined): void;
 	}
 
 	class Camera extends Transform {
-		constructor (gl: GLContext, options: ICameraInit);
+		constructor(gl: GLContext, options: ICameraInit);
 
 		lookAt(vec3: IVec3Arr | Vec3): this;
 
@@ -213,17 +234,17 @@ declare module 'ogl' {
 
 		constructor(gl: GLContext, options?: IProgramInit);
 
-		use (options: any): void;
+		use(options: any): void;
 	}
 
-	class Texture <T extends IImageSource = HTMLImageElement> {
+	class Texture<T extends IImageSource = HTMLImageElement> {
 		texture: WebGLTexture;
 		width: number;
 		height: number;
 		image: T;
 		needsUpdate: boolean;
 
-		constructor (gl: GLContext, options?: ITextureOptions <T>);
+		constructor(gl: GLContext, options?: ITextureOptions<T>);
 
 		bind(): void;
 
