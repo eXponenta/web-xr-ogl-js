@@ -1,4 +1,6 @@
 import React, { ReactElement, useCallback, useEffect, useState } from "react";
+import { IEventPair } from "react-ogl";
+import { pushRoute } from "./Route";
 
 export interface ILinkParams {
 	/**
@@ -8,7 +10,7 @@ export interface ILinkParams {
 	/**
 	 * Which event will produce navigation 'pointerup' or 'pointerdown'
 	 */
-	mode?: "up" | "down";
+	triggerEvent?: "onPointeUp" | "onPointerDown";
 	/**
 	 * Delay between event and routing
 	 */
@@ -29,53 +31,51 @@ declare global {
 	}
 }
 
-export const asLink = (
-	linkTargetComponent: ReactElement<IEventHandlerComponent>,
-	{ href, mode = "down", delay = 0 }: ILinkParams
-) => {
+export const asLink = (linkTargetComponent: IEventHandlerComponent) => {
 	return ({
-		onPointerUp,
-		onPointerDown,
 		children,
+		href,
+		triggerEvent = "onPointerDown",
+		delay = 0, 
 		...props
-	}: IEventHandlerComponent) => {
+	}: IEventHandlerComponent & ILinkParams) => {
 		const [executed, setExecute] = useState(false);
 
 		const executeRoute = () => {
-			console.log("Route to", href);
+			console.log("Begin route to", href);
 
 			setExecute(true);
+
+			setTimeout(() => {
+				console.log("End route to", href);
+				pushRoute(href);
+				setExecute(false);
+			}, delay | 0);
 		};
 
-		const executeDown = useCallback(
-			(e: any) => {
-				onPointerDown && onPointerDown(e);
+		const execute = useCallback(
+			(e: IEventPair<PointerEvent> | PointerEvent) => {
 
-				if (mode === "down" && !executed) executeRoute();
+				const event = e instanceof Event ? e : e.event;
+				if (event.preventDefault) event.preventDefault();
+
+				if (props[triggerEvent]) {
+					props[triggerEvent](e);
+				}
+
+				if (!executed) executeRoute();
 			},
-			[onPointerDown]
+			[triggerEvent]
 		);
-
-		const executeUp = useCallback(
-			(e: any) => {
-				onPointerUp && onPointerUp(e);
-
-				if (mode === "up" && !executed) executeRoute();
-			},
-			[onPointerUp]
-		);
-
-		useEffect(() => {
-			if (executed) {
-				setTimeout(() => {}, delay | 0);
-			}
-		}, [executed]);
 
 		return (
 			<linkTargetComponent
 				{...props}
-				onPointerUp={executeUp}
-				onPointerDown={executeDown}
+
+				{...{
+					[triggerEvent]: execute
+				}}
+
 			>
 				{children}
 			</linkTargetComponent>

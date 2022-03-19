@@ -1,6 +1,5 @@
 import {
 	Children,
-	PropsWithChildren,
 	cloneElement,
 	ReactElement,
 	useState,
@@ -10,7 +9,7 @@ import {
 export interface IRouteProps {
 	path: string;
 	mode?: "visible" | "unmount";
-	children?: ReactElement;
+	children?: any;
 }
 
 export const useRouter = () => window.location.pathname;
@@ -40,12 +39,12 @@ export const Route = ({ path, mode = "unmount", children }: IRouteProps) => {
 	const needRender = path === currentPath;
 
 	if (mode === "unmount") {
-		return needRender ? { children } : void 0;
+		return needRender ? children  : null;
 	}
 
 	return Children.map(children, (child) => {
 		if (typeof child !== "object" || !child) {
-			return needRender ? child : void 0;
+			return needRender ? child : null;
 		}
 
 		return cloneElement(child, {

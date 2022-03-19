@@ -4,6 +4,7 @@ import { BaseAppContext } from "./BaseAppContext";
 
 import Overlay from "./App";
 import XRApp from "./XRApp";
+import { Route } from "./components/Router";
 
 function BaseApp() {
 	const htmlRef = useRef<HTMLDivElement>();
@@ -13,8 +14,12 @@ function BaseApp() {
 		<BaseAppContext.Provider
 			value={{ overlayRoot: htmlRef.current, xrState }}
 		>
-			<XRApp onCreated={setXRState} />
-			<Overlay ref={htmlRef} />
+			<Route path="/xr">
+				<XRApp onCreated={setXRState} />
+			</Route>
+			<Route path="/">
+				<Overlay ref={htmlRef} />
+			</Route>
 		</BaseAppContext.Provider>
 	);
 }
