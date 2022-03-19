@@ -5,8 +5,9 @@ import { XRRenderer } from "./xr/XRRenderer";
 import Layer3D from "./components/Layer3D";
 import CanvasDebugFrame from "./components/CanvasDebugFrame";
 import { BaseAppContext } from "./BaseAppContext";
+import { LinkWrap, Route } from "./components/Router";
 
-const Scene = () => {
+const Scene = ({ visible }: { visible?: boolean }) => {
 	const state = useOGL();
 
 	useFrame(() => {
@@ -20,7 +21,18 @@ const Scene = () => {
 	}, []);
 
 	return (
-		<transform position={[0, 1.6, 0]}>
+		<transform position={[0, 1.6, 0]} visible={visible}>
+			<LinkWrap href="/">
+				<Layer3D
+					label="grid"
+					width={0.2}
+					height={0.1}
+					position={[0, 2, 0]}
+				>
+					<CanvasDebugFrame width={100} height={50} />
+				</Layer3D>
+			</LinkWrap>
+
 			<Layer3D label="grid" width={4} height={2}>
 				<CanvasDebugFrame width={1024} height={512} />
 			</Layer3D>
@@ -48,10 +60,15 @@ const Scene = () => {
 	);
 };
 
-export default React.forwardRef<
-	HTMLCanvasElement,
-	{ onCreated: (state: RootState) => void }
->(function XRApp({ onCreated }, forwardRef) {
+export interface IXRAppProps {
+	onCreated?: (state: RootState) => void;
+	visible?: boolean;
+}
+
+export default React.forwardRef<HTMLCanvasElement, IXRAppProps>(function XRApp(
+	{ onCreated, visible },
+	forwardRef
+) {
 	const ref = useRef<HTMLCanvasElement>(null);
 
 	return (
@@ -68,7 +85,7 @@ export default React.forwardRef<
 				})
 			}
 		>
-			<Scene />
+			<Scene visible={visible} />
 		</Canvas>
 	);
 });

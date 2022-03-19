@@ -1,5 +1,6 @@
 import { forwardRef, HTMLProps, useContext, useEffect } from "react";
 import { BaseAppContext } from "./BaseAppContext";
+import { LinkWrap } from "./components/Router";
 
 export default forwardRef<HTMLDivElement, HTMLProps<HTMLDivElement>>(function HtmlApp(_, ref) {
 	const context = useContext(BaseAppContext);
@@ -21,7 +22,9 @@ export default forwardRef<HTMLDivElement, HTMLProps<HTMLDivElement>>(function Ht
 				userSelect: 'none'
 			}}
 		>
-			DOM App Context
+			<LinkWrap href="/xr">
+				<button style={{pointerEvents: 'auto'}}>Test</button>
+			</LinkWrap>
 		</div>
 	);
 });

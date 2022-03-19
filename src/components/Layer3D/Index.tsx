@@ -1,8 +1,15 @@
 import { Mesh, Program, Transform, Vec3 } from "ogl";
 import React, { useEffect, useRef, useState } from "react";
-import { IEventPair, Vec3Props } from "react-ogl";
+import { IEventPair, Vec3Props, EventHandlers } from "react-ogl";
 import BaseProgram from "../BaseProgram";
 import { createMappedEvent, EventContextForwarder, IHitRegion } from "../EventContext";
+
+const mergeEvents = (handlers: Array<(e: any) => void> ) => {
+	return (e: any) => {
+		handlers.forEach((h) => h && h(e));
+	}
+}
+
 
 export interface ILayer3DProp {
 	label?: string;
@@ -25,8 +32,16 @@ export default function Layer3D({
 	rotation = [0, 0, 0],
 	pixelWidth = width * 100,
 	pixelHeight = height * 100,
-	children
-}: ILayer3DProp) {
+
+	onPointerDown,
+	onPointerUp,
+	onPointerMove,
+	onPointerOut,
+	onPointerOver,
+	onClick,
+
+	children,
+}: ILayer3DProp & EventHandlers) {
 
 	const [hitRegion] = useState<IHitRegion>( { width: pixelWidth, height: pixelHeight });
 	const [eventTarget] = useState<EventTarget>(new EventTarget());
@@ -80,15 +95,17 @@ export default function Layer3D({
 		reDespath(e, {type: 'pointerout'});
 	};
 
-
 	return (
 		<transform rotation={rotation} position={position} ref={transformRef}>
 			<mesh
 				position={[-width * anchor[0], -height * anchor[1], 0]}
-				onPointerOver={handleOver}
-				onPointerOut={handleOut}
-				onPointerMove={handleMove}
-				onPointerDown={reDespath}
+				onPointerOver={mergeEvents([handleOver, onPointerOver])}
+				onPointerOut={mergeEvents([handleOut, onPointerOut])}
+				onPointerMove={mergeEvents([handleMove, onPointerMove])}
+				onPointerDown={mergeEvents([reDespath, onPointerDown])}
+				onPointerUp={onPointerUp}
+				onClick={onClick}
+
 				ref={meshRef}
 			>
 				<EventContextForwarder.Provider value={eventTarget}>
