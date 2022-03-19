@@ -1,4 +1,4 @@
-import { Route, useRouter } from "./Route";
+import { Route, getCurrentUrl } from "./Route";
 
-export { Route, useRouter }
+export { Route, getCurrentUrl as useRouter }
 export { LinkWrap } from './LinkWrap'

@@ -65,8 +65,9 @@ export const LinkWrap = ({
 		const t = setTimeout(() => {
 			console.debug("End route to", href);
 
-			pushRoute(href);
 			setExecute(false);
+			pushRoute(href);
+
 		}, delay | 0);
 
 		return () => clearTimeout(t);
