@@ -49,7 +49,7 @@ export default React.forwardRef<HTMLCanvasElement, IXRAppProps>(function XRApp(
 	return (
 		<Canvas
 			onCreated={mergeCallbacks([createRendererContext, onCreated])}
-			camera={{ position: [0, 1.6, 4] }}
+			camera={{ position: [0, 1.6, 0], fov: 110 }}
 			ref={mergeRefs([forwardRef, ref])}
 			renderer={createRenderer}
 			frameloop='never'

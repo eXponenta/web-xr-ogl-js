@@ -14,12 +14,8 @@ function BaseApp() {
 		<BaseAppContext.Provider
 			value={{ overlayRoot: htmlRef.current, xrState }}
 		>
-			<Route path="/xr" mode='visible'>
-				<XRApp onCreated={setXRState} />
-			</Route>
-			<Route path="/">
-				<Overlay ref={htmlRef} />
-			</Route>
+			<XRApp onCreated={setXRState} />
+			<Overlay ref={htmlRef} />
 		</BaseAppContext.Provider>
 	);
 }

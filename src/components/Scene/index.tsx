@@ -16,11 +16,11 @@ export const Scene = ({ visible }: { visible?: boolean }) => {
 	const baseAppContext = useContext(BaseAppContext);
 
 	useEffect(() => {
-		baseAppContext.xrState = state;
+		baseAppContext.xrState = state as any;
 	}, []);
 
 	return (
-		<transform position={[0, 1.6, 0] as any} visible={visible}>
+		<transform position={[0, 1.6, -2] as any} visible={visible}>
 			<LinkWrap href="/">
 				<Layer3D
 					label="grid"
