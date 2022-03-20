@@ -38,10 +38,19 @@ import { XRRenderer } from "./xr/XRRenderer";
 
 	const gridTexture = new Texture<HTMLCanvasElement>(gl, {image: textCanvas});// new CheckmateTexture(gl, {width: 1024, height: 1024, count: 4})
 
-	let frameIndex = 0;
+	let last = 0;
+	let avg = 0;
 
 	function updateText () {
-		frameIndex ++;
+		let fps = 0;
+
+		if (last == 0) {
+			last = performance.now();
+		} else {
+			fps = 1000 / (performance.now() - last);
+			avg = avg * 0.9 + fps * 0.1;
+			last = performance.now();
+		}
 
 		textContext.clearRect(0, 0, textCanvas.width, textCanvas.height);
 
@@ -53,7 +62,7 @@ import { XRRenderer } from "./xr/XRRenderer";
 		textContext.font = '100px Arial';
 		textContext.textAlign = 'center';
 		textContext.fillText(
-			"Frame: " + frameIndex.toFixed(0),
+			"Frame: " + avg.toFixed(0),
 			textCanvas.width / 2, 50 + textCanvas.height / 2, textCanvas.width
 		)
 
@@ -104,12 +113,10 @@ import { XRRenderer } from "./xr/XRRenderer";
 
 		updateText();
 
-		if (planeLayer && frameIndex > 10) {
-			planeLayer.rotation.y -= 0.02;
+		planeLayer.rotation.y -= 0.02;
 
-			planeLayer.referencedTexture = gridTexture;
-			planeLayer.dirty = true;
-		}
+		planeLayer.referencedTexture = gridTexture;
+		planeLayer.dirty = true;
 
 		renderer.gl.clearColor(0,0,0,0);
 
