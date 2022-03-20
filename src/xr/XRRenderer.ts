@@ -220,7 +220,7 @@ export class XRState extends EventTarget {
 		}
 
 		// push front
-		this.layers.push(layer);
+		this.layers.unshift(layer);
 
 		this.updateRenderState();
 
