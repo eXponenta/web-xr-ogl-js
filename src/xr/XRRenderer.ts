@@ -130,13 +130,15 @@ export class XRState extends EventTarget {
 	onInputChanged(event: XRInputSourceEvent) {
 		this.dispatchEvent(
 			new CustomEvent("xrinputsourceschange", {
-				detail: this.session.inputSources,
+				detail: this.session?.inputSources || [],
 			})
 		);
 	}
 
 	onEnd() {
 		this.clear();
+
+		this.onInputChanged(null);
 		this.dispatchEvent(new CustomEvent("xrend"));
 	}
 
