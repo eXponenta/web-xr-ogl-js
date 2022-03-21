@@ -105,7 +105,7 @@ import { XRRenderer } from "./xr/XRRenderer";
 	 * @param {import('webxr').XRFrame} [frame]
 	 */
 	function update(time, frame = null) {
-		renderer.requestAnimatioFrame(update);
+		renderer.requestAnimationFrame(update);
 
 		updateText();
 
