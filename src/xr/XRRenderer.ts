@@ -1,4 +1,4 @@
-import { Renderer } from "ogl";
+import { IRenderTaskOptions, Renderer } from "ogl";
 import { OGLQuadLayer, OGLXRLayer } from "./layers";
 import { ISessionRequest, XRState } from "./XRState";
 
@@ -340,7 +340,7 @@ export class XRRenderer extends Renderer {
 		this.bindFramebuffer();
 	}
 
-	render(options) {
+	render(options: IRenderTaskOptions) {
 		// render to XR if not a target and XR mode
 		if (!options.target && this.xr.active) {
 			return this.renderXR(options);
