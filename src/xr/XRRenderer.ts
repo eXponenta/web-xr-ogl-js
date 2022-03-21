@@ -63,7 +63,6 @@ export class XRState extends EventTarget {
 	}
 
 	async requestSession(
-		context: XRRenderer,
 		{
 			mode = "immersive-vr",
 			space = "local",

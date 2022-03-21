@@ -32,6 +32,38 @@ const fragment = /* glsl */ `
 	}
 `;
 
+const alphaOnlyFragment = /* glsl */ `
+precision highp float;
+varying vec2 vUv;
+
+void main() {
+	gl_FragColor = vec4(0.0);
+}
+`;
+
+/**
+ * Special shader for allowing depth sorting of nativ layers because standar layer not support it
+ */
+export class AlphaOnlyProgram extends Program {
+	constructor(context: GLContext) {
+		super(context, {
+			vertex: vertex,
+			fragment: alphaOnlyFragment,
+			transparent: false,
+			depthTest: true,
+			depthWrite: true
+		});
+	}
+
+	static instance: AlphaOnlyProgram;
+	static create(gl: GLContext) {
+		if (this.instance) {
+			return this.instance;
+		}
+
+		return (this.instance = new AlphaOnlyProgram(gl));
+	}
+}
 export class PrimitiveProgram extends Program {
 	constructor(context: GLContext, uniforms = {}) {
 		super(context, {
@@ -66,11 +98,15 @@ const EYE_SIDE_MAP = {
 
 export class PrimitiveMaterial {
 	public static emptyTexture: Texture;
-	public readonly program: Program;
-	public readonly uniforms: Record<string, any>;
+	private readonly _alphaProgram: Program;
+	private readonly _baseProgram: Program;
 
-	public texture: Texture<any>;
-	public eye: keyof typeof EYE_SIDE_MAP = 'none';
+	program: Program;
+
+	readonly uniforms: Record<string, any>;
+
+	texture: Texture<any>;
+	eye: keyof typeof EYE_SIDE_MAP = 'none';
 
 	constructor(
 		context: GLContext,
@@ -86,7 +122,20 @@ export class PrimitiveMaterial {
 		};
 
 		this.texture = texture || (PrimitiveMaterial.emptyTexture || (PrimitiveMaterial.emptyTexture = new Texture(context)));
-		this.program = PrimitiveProgram.create(context, this.uniforms);
+		this._baseProgram = this.program = PrimitiveProgram.create(context, this.uniforms);
+		this._alphaProgram = AlphaOnlyProgram.create(context);
+	}
+
+	/**
+	 * Alpha only setter swich program to Alpha, wich allow render only alpha (fully transparent)
+	 * Needed for sorting a layers
+	 */
+	set alphaOnly(v: boolean) {
+		this.program = v ? this._alphaProgram : this._baseProgram;
+	}
+
+	get alphaOnly() {
+		return this.program === this._alphaProgram;
 	}
 
 	use(options: any) {

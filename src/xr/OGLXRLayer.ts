@@ -19,16 +19,40 @@ export class OGLXRLayer<
 	V = any
 > extends Transform {
 	static context: XRRenderer;
-	public id: number = 0;
 
-	context: XRRenderer;
+	protected _context: XRRenderer;
+
+	id: number = 0;
+
 	options: V;
+
 	nativeLayer: T;
+
 	nativeTransform: XRRigidTransform;
-	emulatedLayers: ILayerPrimitive[]; //
+
+	clipMesh: ILayerPrimitive;
+
 	targets: Record<string, XRRenderTarget> = {};
-	referencedTexture: Texture<IImageSource> = null;
+
+	depthClip: boolean = true;
+
 	dirty: boolean = false;
+
+	texture: Texture<IImageSource> = null;
+
+	/**
+	 * @deprecated See texture
+	 */
+	get referencedTexture() {
+		return this.texture;
+	}
+
+	/**
+	 * @deprecated See texture
+	 */
+	set referencedTexture(v) {
+		this.texture = v;
+	}
 
 	onLayerDestroy: (layer: this, nativeOnly: boolean) => void;
 
@@ -40,24 +64,28 @@ export class OGLXRLayer<
 		super();
 
 		this.options = options;
-		this.context = (this.constructor as typeof OGLXRLayer).context;
+		this._context = (this.constructor as typeof OGLXRLayer).context;
 
-		if (!this.context) {
+		if (!this._context) {
 			throw new Error('Layer not registered in XRRendere or called before init');
 		}
 
 		this.onLayerDestroy = () => {};
+	}
 
-		this.id = this.context.registerLayer(this);
+	protected initDone() {
+		this.id = this._context.registerLayer(this);
+
+		this.createClipMesh();
 	}
 
 	get isNative() {
-		return !!this.nativeLayer && !this.emulatedLayers;
+		return !!this.nativeLayer;
 	}
 
-	protected _removeFallbackLayers(layers: Array<ILayerPrimitive>): void {}
+	protected _removeClipMesh(layers: ILayerPrimitive): void {}
 
-	protected _createFallbackLayers(): Array<ILayerPrimitive> {
+	protected _createClipMesh(): ILayerPrimitive {
 		throw new Error("Not implemented");
 	}
 
@@ -65,11 +93,11 @@ export class OGLXRLayer<
 		frame: XRFrame,
 		eye: "left" | "right" | "none" = "none"
 	): XRRenderTarget {
-		const target = this.targets[eye] || new XRRenderTarget(this.context);
+		const target = this.targets[eye] || new XRRenderTarget(this._context);
 
-		target.referencedTexture = this.referencedTexture;
+		target.referencedTexture = this.texture;
 		target.attach(
-			this.context.xr.glBinding.getSubImage(
+			this._context.xr.glBinding.getSubImage(
 				this.nativeLayer as XRCompositionLayer,
 				frame,
 				eye
@@ -89,20 +117,24 @@ export class OGLXRLayer<
 		}
 
 		if (layer) {
-			this.destroyFallback();
-
 			this.nativeLayer = layer;
 			this._updateNative(null);
-		} else {
-			// add virtual layer
-			this.createFallback();
 		}
+
+		this.createClipMesh();
+
+		// if layer is presented, use clip mesh only as depth clipper
+		this.clipMesh.alphaOnly = !!layer;
+		this.clipMesh.visible = !layer || this.depthClip;
 	}
 
-	protected _updateFallback(frame: XRFrame) {
-		this.emulatedLayers.forEach((e) => {
-			e.texture = this.referencedTexture;
-		});
+	protected _updateClipMesh(frame: XRFrame) {
+		// no update when not exis
+		if (!this.nativeLayer) {
+			return;
+		}
+
+		this.clipMesh.texture = this.referencedTexture;
 	}
 
 	protected _updateNative(frame: XRFrame = null) {
@@ -121,7 +153,7 @@ export class OGLXRLayer<
 	}
 
 	update(frame: XRFrame) {
-		this.emulatedLayers && this._updateFallback(frame);
+		this.clipMesh && this._updateClipMesh(frame);
 		this.nativeLayer && this._updateNative(frame);
 	}
 
@@ -138,29 +170,27 @@ export class OGLXRLayer<
 		this.nativeTransform = null;
 	}
 
-	createFallback() {
-		if (this.emulatedLayers) {
+	createClipMesh() {
+		if (this.clipMesh) {
 			return;
 		}
 
-		this.emulatedLayers = this._createFallbackLayers();
-		this.emulatedLayers &&
-			this.emulatedLayers.forEach((e, i) => {
-				e.texture = this.referencedTexture;
-				e.eye =  this.emulatedLayers.length === 1 ? 'none' : ['left', 'right'][i] as any;
-				this.addChild(e)
-			});
+		this.clipMesh = this._createClipMesh();
+
+		if (this.clipMesh) {
+			this.addChild(this.clipMesh);
+			this._updateClipMesh(null);
+		}
 	}
 
-	destroyFallback() {
-		if (!this.emulatedLayers) {
+	destroyClipMesh() {
+		if (!this.clipMesh) {
 			return;
 		}
 
-		this._removeFallbackLayers(this.emulatedLayers);
-
-		this.emulatedLayers.forEach((e) => this.removeChild(e));
-		this.emulatedLayers = null;
+		this._removeClipMesh(this.clipMesh);
+		this.clipMesh?.setParent(null);
+		this.clipMesh = null;
 	}
 
 	destroy() {
@@ -172,12 +202,18 @@ export class OGLXRLayer<
 		}
 
 		this.targets = null;
-		this.referencedTexture = null;
+		this.texture = null;
 	}
 }
 
 export class OGLQuadLayer extends OGLXRLayer<XRQuadLayer, IQuadLayerInit> {
 	readonly type: "cube" | "quad" | "none" = "quad";
+
+	constructor(options: IQuadLayerInit) {
+		super(options);
+
+		this.initDone();
+	}
 
 	set width(v: number) {
 		this.nativeLayer.width = v;
@@ -195,17 +231,11 @@ export class OGLQuadLayer extends OGLXRLayer<XRQuadLayer, IQuadLayerInit> {
 		return this.nativeLayer.height;
 	}
 
-	// called before fallback layer is removed
-	protected _removeFallbackLayers(layer: Array<ILayerPrimitive>): void {}
 
-	protected _createFallbackLayers(): Array<ILayerPrimitive> {
-		const fallback = [new QuadPrimitive(this.context.gl, this.options)];
-
-		if (this.options.layout?.includes("stereo")) {
-			fallback.push(new QuadPrimitive(this.context.gl, this.options));
-		}
-
-		return fallback;
+	protected _createClipMesh(): ILayerPrimitive {
+		return new QuadPrimitive(
+			this._context.gl, this.options
+		);
 	}
 
 	_updateNative(frame: XRFrame = null): void {
@@ -213,13 +243,13 @@ export class OGLQuadLayer extends OGLXRLayer<XRQuadLayer, IQuadLayerInit> {
 
 		this.nativeLayer.transform = this.nativeTransform;
 
-		if ((this.nativeLayer.needsRedraw || this.dirty) && frame && this.referencedTexture) {
+		if ((this.nativeLayer.needsRedraw || this.dirty) && frame && this.texture) {
 
 			if (!this.options.layout?.includes('stereo')) {
-				this.getRenderTarget(frame, 'none').copyFrom(this.referencedTexture);;
+				this.getRenderTarget(frame, 'none').copyFrom(this.texture);;
 			} else {
 				for(let key of ['left', 'right'] as const) {
-					this.getRenderTarget(frame, key).copyFrom(this.referencedTexture);
+					this.getRenderTarget(frame, key).copyFrom(this.texture);
 				}
 			}
 
