@@ -21,11 +21,15 @@ declare class XRWebGLLayerExt extends XRWebGLLayer {
 declare module "webxr" {
 	interface XRCompositionLayer extends XRLayer {
 		destroy(): void;
+
 		readonly needsRedraw: boolean;
+		readonly ignoreDepthValues: boolean;
+		readonly layout: 'default' | 'mono' | 'stereo' | 'stereo-left-righ' | 'stereo-top-bottom';
+
+		blendTextureSourceAlpha: boolean;
 	}
 
 	interface XRProjectionLayer extends XRCompositionLayer {
-
 	}
 
 	interface XRCubeLayer extends XRCompositionLayer {

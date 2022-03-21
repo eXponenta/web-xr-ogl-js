@@ -5,6 +5,7 @@ import { XRRenderer } from "./XRRenderer";
 export class XRRenderTarget {
 	isMSAA = false;
 
+	readonly supportsInvalidateFramebuffer = /OculusBrowser/g.test( navigator.userAgent );
 	readonly context: XRRenderer;
 
 	viewport: {
@@ -25,6 +26,8 @@ export class XRRenderTarget {
 	renderBuffers: Array<WebGLRenderbuffer> = [];
 
 	copyBuffer: WebGLFramebuffer;
+
+	ignoreDepthValue: boolean = false;
 
 	constructor(context: XRRenderer) {
 		this.context = context;
@@ -155,7 +158,7 @@ export class XRRenderTarget {
 
 				gl.framebufferRenderbuffer(
 					gl.FRAMEBUFFER,
-					gl.DEPTH_STENCIL_ATTACHMENT,
+					gl.DEPTH_ATTACHMENT,
 					gl.RENDERBUFFER,
 					rb
 				);
@@ -163,7 +166,7 @@ export class XRRenderTarget {
 				gl.renderbufferStorageMultisample(
 					gl.RENDERBUFFER,
 					samples,
-					gl.DEPTH24_STENCIL8,
+					gl.DEPTH_COMPONENT24,
 					subImage.textureWidth,
 					subImage.textureHeight
 				);
@@ -234,20 +237,41 @@ export class XRRenderTarget {
 		}
 
 		const { gl } = <{ gl: WebGL2RenderingContext }>this.context;
-		const {
-			textureHeight, textureWidth
-		} = this.subImageAttachment;
+		const { textureHeight, textureWidth } = this.subImageAttachment;
+		const invalidation = [ gl.COLOR_ATTACHMENT0 ];
 
 		this.context.bindFramebuffer({target: gl.READ_FRAMEBUFFER, buffer: this.buffer});
 		this.context.bindFramebuffer({target: gl.DRAW_FRAMEBUFFER, buffer: this.copyBuffer});
 
+		if (this.ignoreDepthValue) {
+
+			/* this is not work as expexted
+				gl.invalidateFramebuffer(gl.READ_FRAMEBUFFER, [ gl.DEPTH_ATTACHMENT ]);
+				gl.invalidateFramebuffer(gl.DRAW_FRAMEBUFFER, [ gl.DEPTH_ATTACHMENT ]);
+			*/
+
+			invalidation.push(gl.DEPTH_ATTACHMENT);
+		}
+
+		let blitMask = gl.COLOR_BUFFER_BIT;
+
+		if (this.ignoreDepthValue === false) {
+			blitMask = blitMask | gl.DEPTH_BUFFER_BIT;
+		}
+
 		gl.blitFramebuffer(
 			0, 0, textureWidth, textureHeight,
 			0, 0, textureWidth, textureHeight,
-			gl.COLOR_BUFFER_BIT,
+			blitMask,
 			gl.NEAREST
 		);
 
+		if (this.supportsInvalidateFramebuffer) {
+			gl.invalidateFramebuffer(gl.FRAMEBUFFER, invalidation);
+			gl.invalidateFramebuffer(gl.READ_FRAMEBUFFER, invalidation);
+		}
+
+		gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
 		// unbind state
 		this.context.bindFramebuffer();
 	}

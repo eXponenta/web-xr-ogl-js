@@ -68,7 +68,7 @@ export class XRState extends EventTarget {
 			mode = "immersive-vr",
 			space = "local",
 			options = {
-				requiredFeatures: ["local"],
+				requiredFeatures: ["local",],
 				optionalFeatures: ["layers"],
 			},
 		}: ISessionRequest = {}
@@ -201,6 +201,10 @@ export class XRState extends EventTarget {
 					layer = this.glBinding.createProjectionLayer({});
 					this.baseLayer = layer;
 					this.baseLayerTarget = new XRRenderTarget(this.context);
+					this.baseLayerTarget.ignoreDepthValue = layer.ignoreDepthValues;
+
+					console.debug("Occure presentation layer", this.baseLayer);
+
 					break;
 				}
 				case "quad": {
@@ -280,6 +284,17 @@ export class XRState extends EventTarget {
 }
 
 type TRafCallback = (time: number, frame?: XRFrame) => void;
+
+interface OCULUS_multiview extends OVR_multiview2 {
+	framebufferTextureMultisampleMultiviewOVR?: (
+		target: GLenum,
+		attachment: GLenum,
+		texture: WebGLTexture | null,
+		level: GLint,
+		samples: GLsizei,
+		baseViewIndex: GLint ,
+		numViews: GLsizei) => void
+}
 export class XRRenderer extends Renderer {
 	static layersCtors: Record<
 		"cube" | "quad" | "sphere",
@@ -298,6 +313,8 @@ export class XRRenderer extends Renderer {
 	_rafCallbacks: Map<number, TRafCallback> = new Map();
 	_calbackID: number = 0;
 	_clearLoopDel: () => void = null;
+	_multiview: OCULUS_multiview;
+	_multiviewAA: boolean = false;
 
 	constructor(options) {
 		super(options);
@@ -315,6 +332,16 @@ export class XRRenderer extends Renderer {
 		Object.values(XRRenderer.layersCtors).forEach((ctor: typeof OGLXRLayer) => {
 			ctor && (ctor.context = this);
 		});
+
+		/*
+		this._multiview = this.gl.getExtension('OCULUS_multiview');
+		this._multiviewAA = !!this._multiview;
+		this._multiview = this.gl.getExtension('OVR_multiview2');
+
+		if (this._multiview) {
+			console.debug('[MULTIVEW] ' + this.gl.getParameter(this._multiview.MAX_VIEWS_OVR));
+		}
+		*/
 	}
 
 	_internalLoop(time?: number, frame?: XRFrame) {
@@ -450,7 +477,7 @@ export class XRRenderer extends Renderer {
 		this.layers.forEach((l) => this.bindNativeLayerTo(l));
 	}
 
-	async requestXR(options?) {
+	async requestXR(options?: ISessionRequest) {
 		if (this.xr.active) {
 			return Promise.resolve();
 		}
@@ -460,7 +487,7 @@ export class XRRenderer extends Renderer {
 		this._clearLoop();
 
 		try {
-			await this.xr.requestSession(this, options);
+			await this.xr.requestSession(options);
 		} finally {
 			this._attachLoop();
 		}
