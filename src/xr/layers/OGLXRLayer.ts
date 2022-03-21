@@ -1,79 +1,84 @@
 import { Texture, Transform, IImageSource, Quat, Vec3 } from "ogl";
-import {
-	XRCompositionLayer,
-	XRFrame, XRRigidTransform
-} from "webxr";
-
-import { ILayerPrimitive } from "./primitives/";
-import { XRRenderer } from "../XRRenderer";
+import * as WEBXR from "webxr";
 import { XRRenderTarget } from "../XRRenderTarget";
+
+import type { ILayerPrimitive } from "./primitives/";
+import type { XRRenderer } from "../XRRenderer";
 
 const tmpQuat = new Quat();
 const tmpPos = new Vec3();
 
-export class OGLXRLayer<
-	T extends XRCompositionLayer = XRCompositionLayer,
-	V = any
-	> extends Transform {
+export class OGLXRLayer<T extends WEBXR.XRCompositionLayer = WEBXR.XRCompositionLayer, V = any> extends Transform {
+
 	static context: XRRenderer;
 
-	protected _context: XRRenderer;
+	public readonly options: V;
 
-	id: number = 0;
+	public readonly type: "cube" | "quad" | "none" = "none";
 
-	options: V;
+	public id: number = 0;
 
-	nativeLayer: T;
+	public depthClip: boolean = true;
 
-	nativeTransform: XRRigidTransform;
+	public contentDirty: boolean = false;
 
-	clipMesh: ILayerPrimitive;
-
-	targets: Record<string, XRRenderTarget> = {};
-
-	depthClip: boolean = true;
-
-	contentDirty: boolean = false;
-
-	protected dimensionsDirty = false;
-
-	texture: Texture<IImageSource> = null;
-
+	/**
+	 * @deprecated
+	 * @see contentDirty
+	 */
 	public set dirty(v) {
 		this.contentDirty = true;
 	}
 
-	get dirty() {
+	public get dirty() {
 		return this.contentDirty;
 	}
+
+	public texture: Texture<IImageSource> = null;
 
 	/**
 	 * @deprecated See texture
 	 */
-	get referencedTexture() {
+	public get referencedTexture() {
 		return this.texture;
 	}
 
 	/**
 	 * @deprecated See texture
 	 */
-	set referencedTexture(v) {
+	public set referencedTexture(v) {
+		this.contentDirty = this.contentDirty || v !== this.texture || v.needsUpdate;
 		this.texture = v;
 	}
 
-	onLayerDestroy: (layer: this, nativeOnly: boolean) => void;
 
-	readonly type: "cube" | "quad" | "none" = "none";
+	public get isNative() {
+		return !!this.nativeLayer;
+	}
 
-	transformDirty: boolean = true;
+	/* internal */ nativeLayer: T;
+
+	/* internal */ nativeTransform: WEBXR.XRRigidTransform;
+
+	protected dimensionsDirty = false;
+
+	protected transformDirty: boolean = true;
+
+	protected clipMesh: ILayerPrimitive;
+
+	protected targets: Record<string, XRRenderTarget> = {};
+
+	protected context: XRRenderer;
+
+	/* internal */ onLayerDestroy: (layer: this, nativeOnly: boolean) => void;
 
 	constructor(options?: V) {
 		super();
 
 		this.options = options || {} as V;
-		this._context = (this.constructor as typeof OGLXRLayer).context;
+		this.context = (this.constructor as typeof OGLXRLayer).context;
 
-		if (!this._context) {
+		if (!this.context) {
 			throw new Error('Layer not registered in XRRendere or called before init');
 		}
 
@@ -81,7 +86,7 @@ export class OGLXRLayer<
 	}
 
 	protected initDone() {
-		this.id = this._context.registerLayer(this);
+		this.id = this.context.registerLayer(this);
 
 		this.createClipMesh();
 	}
@@ -100,26 +105,22 @@ export class OGLXRLayer<
 		this.nativeLayer.transform = this.nativeTransform;
 	}
 
-	get isNative() {
-		return !!this.nativeLayer;
-	}
-
 	protected _removeClipMesh(layers: ILayerPrimitive): void { }
 
 	protected _createClipMesh(): ILayerPrimitive {
 		throw new Error("Not implemented");
 	}
 
-	getRenderTarget(
-		frame: XRFrame,
+	public getRenderTarget(
+		frame: WEBXR.XRFrame,
 		eye: "left" | "right" | "none" = "none"
 	): XRRenderTarget {
-		const target = this.targets[eye] || new XRRenderTarget(this._context);
+		const target = this.targets[eye] || new XRRenderTarget(this.context);
 
 		target.referencedTexture = this.texture;
 		target.attach(
-			this._context.xr.glBinding.getSubImage(
-				this.nativeLayer as XRCompositionLayer,
+			this.context.xr.glBinding.getSubImage(
+				this.nativeLayer as WEBXR.XRCompositionLayer,
 				frame,
 				eye
 			)
@@ -131,10 +132,10 @@ export class OGLXRLayer<
 	}
 
 	// bind layer, if layer is null - native will be unbound and dropeed
-	bindLayer(layer: T | null) {
+	/* internal */ bindLayer(layer: T | null) {
 		if (this.nativeLayer && this.nativeLayer !== layer) {
 			this.onLayerDestroy?.(this, true);
-			this.destroyNative();
+			this._destroyNative();
 		}
 
 		if (layer) {
@@ -149,7 +150,7 @@ export class OGLXRLayer<
 		this.clipMesh.visible = !layer || this.depthClip;
 	}
 
-	protected _updateClipMesh(frame: XRFrame) {
+	protected _updateClipMesh(frame: WEBXR.XRFrame) {
 		// no update when not exis
 		if (this.nativeLayer) {
 			return;
@@ -162,7 +163,7 @@ export class OGLXRLayer<
 		this.clipMesh.texture = this.texture;
 	}
 
-	protected _updateNative(frame: XRFrame = null) {
+	protected _updateNative(frame: WEBXR.XRFrame = null) {
 		// we can pool it, XRRig not allow pooling
 		// need has a invalidate stat, but this is not implemented
 		if (this.transformDirty || !this.nativeTransform) {
@@ -180,27 +181,23 @@ export class OGLXRLayer<
 		}
 	}
 
-	update(frame: XRFrame) {
+	public update(frame: WEBXR.XRFrame) {
 		this.clipMesh && this._updateClipMesh(frame);
 		this.nativeLayer && this._updateNative(frame);
 		// should be applied in top
 		this.dimensionsDirty = false;
 	}
 
-	needUpdateTransform() {
+	public needUpdateTransform() {
 		this.transformDirty = true;
 	}
 
-	destroyNative() {
-		if (this.nativeLayer) {
-			this.nativeLayer.destroy();
-		}
-
+	protected _destroyNative() {
 		this.nativeLayer = null;
 		this.nativeTransform = null;
 	}
 
-	createClipMesh() {
+	protected createClipMesh() {
 		if (this.clipMesh) {
 			return;
 		}
@@ -213,7 +210,7 @@ export class OGLXRLayer<
 		}
 	}
 
-	destroyClipMesh() {
+	protected destroyClipMesh() {
 		if (!this.clipMesh) {
 			return;
 		}
@@ -223,9 +220,9 @@ export class OGLXRLayer<
 		this.clipMesh = null;
 	}
 
-	destroy() {
+	public destroy() {
 		this.onLayerDestroy?.(this, false);
-		this.destroyNative();
+		this._destroyNative();
 
 		for (let key in this.targets) {
 			this.targets[key].destroy();
@@ -235,7 +232,7 @@ export class OGLXRLayer<
 		this.texture = null;
 	}
 
-	dispose() {
+	public dispose() {
 		this.destroy();
 	}
 }

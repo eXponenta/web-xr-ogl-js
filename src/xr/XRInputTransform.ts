@@ -1,6 +1,6 @@
 import { Mat4, Transform } from "ogl";
 import { XRInputSource } from "webxr";
-import { XRState } from "./XRRenderer";
+import { XRState } from "./XRState";
 
 type PathedTransform = Transform &  {
 	__transfromPatched?: boolean;

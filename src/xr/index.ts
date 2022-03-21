@@ -121,3 +121,9 @@ export type XRSessionLayers = Omit<XRSession, "renderState"> & {
 	readonly renderState: XRRenderStateLayers;
 	updateRenderState(XRStateInit: XRRenderStateLayers): Promise<void>;
 };
+
+export * from './XRInputTransform';
+export * from './XRRenderer';
+export * from './XRRenderTarget';
+export * from './XRState';
+export * from './layers';

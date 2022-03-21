@@ -1,286 +1,9 @@
 import { Renderer } from "ogl";
-import XRLayers from "webxr-layers-polyfill";
-
-import type {
-	IQuadLayerInit,
-	XRCompositionLayer,
-	XRFrame,
-	XRInputSource,
-	XRInputSourceArray,
-	XRInputSourceEvent,
-	XRLayer,
-	XRReferenceSpace,
-	XRReferenceSpaceType,
-	XRSession,
-	XRSessionInit,
-	XRSessionMode,
-	XRWebGLBinding,
-	XRWebGLLayer,
-	IXRCompositionLayerInit,
-} from "webxr";
-import { XRSessionLayers } from ".";
 import { OGLQuadLayer, OGLXRLayer } from "./layers";
-import { XRRenderTarget } from "./XRRenderTarget";
-import type { XRInputTransform } from "./XRInputTransform";
+import { ISessionRequest, XRState } from "./XRState";
 
-/* Polyfill when needed */
-new XRLayers();
+import type { XRCompositionLayer, XRFrame } from "webxr";
 
-function getXR() {
-	return navigator.xr;
-}
-export interface ISessionRequest {
-	mode?: XRSessionMode;
-	space?: XRReferenceSpaceType;
-	options?: XRSessionInit;
-}
-
-interface XRStateEventMap {
-	xrend: CustomEvent<never>;
-	xrstart: CustomEvent<XRState>;
-	xrinputsourceschange: CustomEvent<XRInputSourceArray>;
-}
-
-export class XRState extends EventTarget {
-	static layersSupport = false;
-
-	context: XRRenderer;
-	session: XRSessionLayers;
-	space: XRReferenceSpace;
-	layers: Array<XRCompositionLayer | XRWebGLLayer> = [];
-	baseLayer: XRWebGLLayer | XRCompositionLayer = null;
-	baseLayerTarget: XRRenderTarget;
-	lastXRFrame: XRFrame = null;
-	glBinding: XRWebGLBinding;
-
-	constructor(context: XRRenderer) {
-		super();
-
-		this.context = context;
-
-		this.onEnd          = this.onEnd.bind(this);
-		this.onInputChanged = this.onInputChanged.bind(this);
-	}
-
-	async requestSession(
-		{
-			mode = "immersive-vr",
-			space = "local",
-			options = {
-				requiredFeatures: ["local",],
-				optionalFeatures: ["layers"],
-			},
-		}: ISessionRequest = {}
-	) {
-		if (this.session) {
-			this.end();
-		}
-
-		const session: XRSessionLayers = await getXR().requestSession(mode, options);
-
-		XRState.layersSupport = !!session.renderState.layers;
-
-		const refSpace = await session.requestReferenceSpace(space);
-
-		this.init(session, refSpace);
-
-		return this;
-	}
-
-	private init (session: XRSessionLayers, space: XRReferenceSpace) {
-		if (this.session) {
-			this.clear();
-		}
-
-		this.space = space;
-		this.session = session;
-		this.session.addEventListener("end", this.onEnd.bind(this));
-		this.session.addEventListener(
-			"inputsourceschange",
-			this.onInputChanged.bind(this)
-		);
-
-		this.dispatchEvent(
-			new CustomEvent("xrstart", {
-				detail: this,
-			})
-		);
-	}
-
-	get active() {
-		return !!this.session;
-	}
-
-	public addEventListener<T extends keyof XRStateEventMap>(
-		type: T,
-		listener: (this: XRState, ev: XRStateEventMap[T]) => any,
-		options?: boolean | AddEventListenerOptions
-	): void;
-
-	public addEventListener(
-		type: string,
-		listener: (this: XRState, ev: Event) => any,
-		options?: boolean | AddEventListenerOptions
-	): void {
-		super.addEventListener(type, listener, options);
-	}
-
-	onInputChanged(event: XRInputSourceEvent) {
-		this.dispatchEvent(
-			new CustomEvent("xrinputsourceschange", {
-				detail: this.session?.inputSources || [],
-			})
-		);
-	}
-
-	onEnd() {
-		this.clear();
-
-		this.onInputChanged(null);
-		this.dispatchEvent(new CustomEvent("xrend"));
-	}
-
-	get inputSources(): Array<XRInputSource & {viewTransfromNode: XRInputTransform}> {
-		return this.session?.inputSources as any || [];
-	}
-
-	// called from layer binding for dropping layer from state
-	/* internal*/
-	onLayerDestroy(layer: XRCompositionLayer | XRWebGLLayer) {
-		if (!XRState.layersSupport || !this.session) {
-			return;
-		}
-
-		this.layers = this.layers.filter((l) => l !== layer);
-		this.updateRenderState();
-	}
-
-	updateRenderState() {
-		if (XRState.layersSupport) {
-			this.session.updateRenderState({ layers: this.layers });
-		} else {
-			this.session.updateRenderState({
-				baseLayer: this.baseLayer as XRWebGLLayer,
-			});
-		}
-	}
-
-	getLayer(
-		gl: GLContext,
-		type: "base" | "cube" | "quad" | "sphere" = "base",
-		options: IXRCompositionLayerInit & Record<string, any> = { space: this.space, viewPixelHeight: 100, viewPixelWidth: 100 }
-	): XRCompositionLayer | XRWebGLLayer {
-		options = Object.assign(
-			{},
-			{ space: this.space, viewPixelHeight: 100, viewPixelWidth: 100 },
-			options
-		);
-
-		if (
-			!XRState.layersSupport &&
-			(type !== "base" || this.layers.length > 1)
-		) {
-			console.warn("[XR] Only single base layer is supported!");
-			return null;
-		}
-
-		let layer: XRCompositionLayer | XRWebGLLayer;
-
-		if (!XRState.layersSupport) {
-			layer = new self.XRWebGLLayer(this.session, gl);
-			this.baseLayer = layer;
-		} else if (!options) {
-			throw new Error("Only base layer can miss options!");
-		} else {
-			this.glBinding =
-				this.glBinding || new self.XRWebGLBinding(this.session, gl);
-
-			switch (type) {
-				case "base": {
-					layer = this.glBinding.createProjectionLayer({});
-					this.baseLayer = layer;
-					this.baseLayerTarget = new XRRenderTarget(this.context);
-					this.baseLayerTarget.ignoreDepthValue = layer.ignoreDepthValues;
-
-					console.debug("Occure presentation layer", this.baseLayer);
-
-					break;
-				}
-				case "quad": {
-					layer = this.glBinding.createQuadLayer(
-						options as IQuadLayerInit
-					);
-					break;
-				}
-				default:
-					throw new Error("Unsuppoted yet:" + type);
-			}
-		}
-
-		// push front
-		this.layers.unshift(layer);
-
-		this.updateRenderState();
-
-		return layer;
-	}
-
-	requestAnimationFrame(callback) {
-		if (!this.session) {
-			throw new Error('Try to requiest anima frame on disabled XRState');
-		}
-
-		const loopid = this.session.requestAnimationFrame((time, frame) => {
-			this.lastXRFrame = frame;
-
-			callback(time, frame);
-
-			this.lastXRFrame = null;
-		});
-
-		return () => {
-			this.session?.cancelAnimationFrame(loopid);
-		};
-	}
-
-	end() {
-		if (!this.session) {
-			return;
-		}
-
-		const session = this.session;
-
-		this.clear();
-
-		this.onInputChanged(null);
-
-		session.end();
-	}
-
-	clear() {
-		if (!this.session) {
-			return;
-		}
-
-		this.session.removeEventListener('end', this.onEnd);
-		this.session.removeEventListener('inputsourceschange', this.onInputChanged);
-
-		for (const layer of this.layers as XRCompositionLayer[]) {
-			layer.destroy && layer.destroy();
-		}
-
-		this.layers = [];
-		this.session = null;
-		this.space = null;
-
-		this.baseLayerTarget?.destroy();
-		(this.baseLayer as XRCompositionLayer)?.destroy?.();
-
-		this.baseLayerTarget = null;
-		this.baseLayer = null;
-		this.glBinding = null;
-	}
-}
 
 type TRafCallback = (time: number, frame?: XRFrame) => void;
 
@@ -403,7 +126,7 @@ export class XRRenderer extends Renderer {
 	/**
 	 * Try to bind virtyal layer to native layer when XR is enabled and layer supported
 	 */
-	bindNativeLayerTo(layer: OGLXRLayer): boolean {
+	/* internal*/ bindNativeLayerTo(layer: OGLXRLayer): boolean {
 		const {
 			type, options
 		} = layer;
@@ -415,11 +138,7 @@ export class XRRenderer extends Renderer {
 			options.space = this.xr.space;
 
 			try {
-				nativeLayer = this.xr.getLayer(
-					this.gl,
-					type as any,
-					options
-				) as XRCompositionLayer;
+				nativeLayer = this.xr.getLayer(type as any, options) as XRCompositionLayer;
 			} catch(e) {
 				console.error('[LAYER Binding Error]', e);
 			}
@@ -446,9 +165,7 @@ export class XRRenderer extends Renderer {
 			this.layers = this.layers.filter((e) => layer !== e);
 		}
 
-		if (this.xr && layer.nativeLayer) {
-			this.xr.onLayerDestroy(layer.nativeLayer);
-		}
+		this.xr.onLayerDestroy(layer.nativeLayer);
 	}
 
 	onSessionLost() {
@@ -469,7 +186,7 @@ export class XRRenderer extends Renderer {
 		this._attachLoop();
 
 		// must be, because we should render
-		this.xr.getLayer(this.gl, "base");
+		this.xr.getLayer("base");
 
 		this.layers.forEach((l) => this.bindNativeLayerTo(l));
 	}
