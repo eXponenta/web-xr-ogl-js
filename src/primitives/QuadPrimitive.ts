@@ -1,22 +1,25 @@
 import { Mesh, Plane, Texture, Transform } from "ogl";
 import { PrimitiveMaterial } from "./PrimitiveMaterial";
 
-export interface ILayerPrimitive extends Transform {
+export interface ILayerPrimitive <T extends object = any> extends Transform {
 	eye: 'none' | 'left' | 'right';
 	texture: Texture<any>;
 	alphaOnly: boolean;
+	apply(options: T);
 }
 
-export class QuadPrimitive extends Mesh <Plane, PrimitiveMaterial>  implements ILayerPrimitive {
+export interface IQuadPrimitiveInit {
+	width?: number;
+	height?: number;
+}
+export class QuadPrimitive extends Mesh <Plane, PrimitiveMaterial>  implements ILayerPrimitive <IQuadPrimitiveInit> {
 	constructor(
 		context: GLContext,
-		options: { width?: number; height?: number } = {}
+		options: IQuadPrimitiveInit = {}
 	) {
 		super(context, {
-			geometry: new Plane(context, {
-				width: options.width * 2,
-				height: options.height * 2,
-			}),
+			// WebXR Lyaers size is twise more that our
+			geometry: new Plane(context, { width: 2, height: 2}),
 			program: new PrimitiveMaterial(context, null),
 		});
 	}
@@ -43,5 +46,9 @@ export class QuadPrimitive extends Mesh <Plane, PrimitiveMaterial>  implements I
 
 	get texture() {
 		return this.program.texture;
+	}
+
+	apply({ width = 1, height = 1 }: IQuadPrimitiveInit) {
+		this.scale.set(width, height, 1);
 	}
 }

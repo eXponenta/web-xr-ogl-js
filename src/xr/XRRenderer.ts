@@ -435,8 +435,6 @@ export class XRRenderer extends Renderer {
 			this.layers.splice(this.layers.indexOf(layer), 1);
 		}
 
-		this.bindNativeLayerTo(layer);
-
 		layer.onLayerDestroy = this._onLayerDestroy;
 
 		return this.layers.unshift(layer);
@@ -523,12 +521,28 @@ export class XRRenderer extends Renderer {
 		this.state.textureUnits[this.state.activeTextureUnit] = -1;
 	}
 
+	prepareLayerState() {
+		if (!this.xr.active) {
+			return;
+		}
+
+		this.layers.forEach((layer) => {
+			if (!layer.nativeLayer) {
+				this.bindNativeLayerTo(layer);
+			}
+
+			layer.update(this.xr.lastXRFrame);
+		});
+	}
+
 	renderXR(options) {
 		const { xr, gl } = this;
 
 		if (!xr || !xr.lastXRFrame || !xr.active) {
 			return;
 		}
+
+		this.prepareLayerState();
 
 		const camera = options.camera;
 
@@ -607,10 +621,6 @@ export class XRRenderer extends Renderer {
 
 		// reset state, XRLyaer polyfill will corrupt state
 		this.bindFramebuffer();
-
-		this.layers.forEach((e) => {
-			e.update(lastXRFrame);
-		});
 	}
 
 	render(options) {
@@ -620,9 +630,8 @@ export class XRRenderer extends Renderer {
 		}
 
 
-		this.layers.forEach((e) => {
-			e.update(null);
-		});
+		// update regular layers
+		this.layers.forEach((e) => e.update(null));
 
 		super.render(options);
 	}

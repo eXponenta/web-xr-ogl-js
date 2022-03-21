@@ -36,9 +36,19 @@ export class OGLXRLayer<
 
 	depthClip: boolean = true;
 
-	dirty: boolean = false;
+	contentDirty: boolean = false;
+
+	protected dimensionsDirty = false;
 
 	texture: Texture<IImageSource> = null;
+
+	public set dirty (v) {
+		this.contentDirty = true;
+	}
+
+	get dirty() {
+		return this.contentDirty;
+	}
 
 	/**
 	 * @deprecated See texture
@@ -60,10 +70,10 @@ export class OGLXRLayer<
 
 	transformDirty: boolean = true;
 
-	constructor(options: V) {
+	constructor(options?: V) {
 		super();
 
-		this.options = options;
+		this.options = options || {} as V;
 		this._context = (this.constructor as typeof OGLXRLayer).context;
 
 		if (!this._context) {
@@ -77,6 +87,20 @@ export class OGLXRLayer<
 		this.id = this._context.registerLayer(this);
 
 		this.createClipMesh();
+	}
+
+	protected _syncWithNative() {
+		if (!this.nativeLayer) {
+			return;
+		}
+
+		for(let key in this.nativeLayer) {
+			if (key in this.options) {
+				this.nativeLayer[key] = (this.options as any)[key];
+			}
+		}
+
+		this.nativeLayer.transform = this.nativeTransform;
 	}
 
 	get isNative() {
@@ -130,11 +154,15 @@ export class OGLXRLayer<
 
 	protected _updateClipMesh(frame: XRFrame) {
 		// no update when not exis
-		if (!this.nativeLayer) {
+		if (this.nativeLayer) {
 			return;
 		}
 
-		this.clipMesh.texture = this.referencedTexture;
+		if (this.dimensionsDirty) {
+			this.clipMesh.apply(this.options);
+		}
+
+		this.clipMesh.texture = this.texture;
 	}
 
 	protected _updateNative(frame: XRFrame = null) {
@@ -150,11 +178,17 @@ export class OGLXRLayer<
 
 			this.nativeTransform = new self.XRRigidTransform(tmpPos,tmpQuat);
 		}
+
+		if (this.dimensionsDirty && this.nativeLayer) {
+			this._syncWithNative()
+		}
 	}
 
 	update(frame: XRFrame) {
 		this.clipMesh && this._updateClipMesh(frame);
 		this.nativeLayer && this._updateNative(frame);
+		// should be applied in top
+		this.dimensionsDirty = false;
 	}
 
 	needUpdateTransform() {
@@ -204,9 +238,13 @@ export class OGLXRLayer<
 		this.targets = null;
 		this.texture = null;
 	}
+
+	dispose() {
+		this.destroy();
+	}
 }
 
-export class OGLQuadLayer extends OGLXRLayer<XRQuadLayer, IQuadLayerInit> {
+export class OGLQuadLayer extends OGLXRLayer<XRQuadLayer, IQuadLayerInit> implements IQuadLayerInit {
 	readonly type: "cube" | "quad" | "none" = "quad";
 
 	constructor(options: IQuadLayerInit) {
@@ -216,21 +254,40 @@ export class OGLQuadLayer extends OGLXRLayer<XRQuadLayer, IQuadLayerInit> {
 	}
 
 	set width(v: number) {
-		this.nativeLayer.width = v;
+		this.options.width = v;
+		this.dimensionsDirty = true;
 	}
 
 	get width() {
-		return this.nativeLayer.width;
+		return this.options.width;
 	}
 
 	set height(v: number) {
-		this.nativeLayer.height = v;
+		this.options.height = v;
+		this.dimensionsDirty = true;
 	}
 
 	get height() {
-		return this.nativeLayer.height;
+		return this.options.height;
 	}
 
+	set viewPixelWidth (v: number) {
+		this.options.viewPixelWidth = v;
+		this.dimensionsDirty = true;
+	}
+
+	get viewPixelWidth() {
+		return this.options.viewPixelWidth;
+	}
+
+	set viewPixelHeight(v: number) {
+		this.options.viewPixelHeight = v;
+		this.dimensionsDirty = true;
+	}
+
+	get viewPixelHeight() {
+		return this.options.viewPixelHeight;
+	}
 
 	protected _createClipMesh(): ILayerPrimitive {
 		return new QuadPrimitive(
@@ -243,7 +300,7 @@ export class OGLQuadLayer extends OGLXRLayer<XRQuadLayer, IQuadLayerInit> {
 
 		this.nativeLayer.transform = this.nativeTransform;
 
-		if ((this.nativeLayer.needsRedraw || this.dirty) && frame && this.texture) {
+		if ((this.nativeLayer.needsRedraw || this.contentDirty) && frame && this.texture) {
 
 			if (!this.options.layout?.includes('stereo')) {
 				this.getRenderTarget(frame, 'none').copyFrom(this.texture);;
@@ -253,7 +310,7 @@ export class OGLQuadLayer extends OGLXRLayer<XRQuadLayer, IQuadLayerInit> {
 				}
 			}
 
-			this.dirty = false;
+			this.contentDirty = false;
 		}
 	}
 }

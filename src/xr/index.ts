@@ -26,6 +26,8 @@ declare module "webxr" {
 		readonly ignoreDepthValues: boolean;
 		readonly layout: 'default' | 'mono' | 'stereo' | 'stereo-left-righ' | 'stereo-top-bottom';
 
+		transform?: XRRigidTransform;
+
 		blendTextureSourceAlpha: boolean;
 	}
 
@@ -42,6 +44,9 @@ declare module "webxr" {
 		transform: XRRigidTransform;
 		height: number;
 		width: number;
+
+		viewPixelHeight: number;
+		viewPixelWidth: number;
 	}
 
 	interface IXRProjectionLayerInit {

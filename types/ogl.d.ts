@@ -192,6 +192,7 @@ declare module "ogl" {
 		readonly worldMatrix: Mat4;
 		readonly matrix: Mat4;
 		readonly position: Vec3;
+		readonly scale: Vec3;
 		readonly rotation: Euler;
 		readonly quaternion: Quat;
 		readonly children: Transform[];
