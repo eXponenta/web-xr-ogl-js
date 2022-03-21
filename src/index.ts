@@ -8,22 +8,22 @@ import {
 	Texture,
 } from "ogl";
 import { XRQuadLayer } from "webxr";
-import { PrimitiveMaterial } from "./primitives/PrimitiveMaterial";
-import { CheckmateTexture } from "./utils/ChekmateTexture";
-import { OGLXRLayer } from "./xr/OGLXRLayer";
+import { OGLQuadLayer, OGLXRLayer } from "./xr/OGLXRLayer";
 import { XRRenderer } from "./xr/XRRenderer";
 
 {
 
 
 	const requiestButton = document.querySelector("#requiest-xr");
-	const canvas = document.querySelector("#frame");
+	const canvas = document.createElement("canvas");
 	const renderer = new XRRenderer({
 		dpr: 2,
 		canvas,
 		antialias: true,
 		autoClear: true,
 	});
+
+	document.querySelector('#react-content').appendChild(canvas);
 
 	/**
 	 * @type {WebGLRenderingContext}
@@ -49,6 +49,7 @@ import { XRRenderer } from "./xr/XRRenderer";
 		textContext.lineWidth = 10;
 		textContext.strokeRect(0,0, textCanvas.width, textCanvas.height);
 
+		textContext.fillStyle = 'white';
 		textContext.font = '100px Arial';
 		textContext.textAlign = 'center';
 		textContext.fillText(
@@ -77,60 +78,22 @@ import { XRRenderer } from "./xr/XRRenderer";
 
 	requiestButton.addEventListener("click", async () => {
 		await renderer.requestXR();
-
-		planeLayer = renderer.createLayer<XRQuadLayer>('quad', {
-			width: 2,
-			height: 1,
-			viewPixelHeight: gridTexture.image.height,
-			viewPixelWidth: gridTexture.image.width
-		});
-
-		scene.addChild(planeLayer);
-
-		// oculus has resynced frames, lol
-		// and stop RAF from window before accept session
-		renderer.requestAnimatioFrame(update);
-
-
-		renderer.xr.session.addEventListener('end', () => {
-			setTimeout(()=>{
-				// oculus has resynced frames, lol
-				// and stop RAF from window before accept session
-			renderer.requestAnimatioFrame(update);
-			});
-		})
 	});
 
 	const scene = new Transform();
-
 	scene.position.set(0, 1, -4);
 
-	const sphereGeometry = new Sphere(gl);
-	const cubeGeometry = new Box(gl);
-	const cylinderGeometry = new Cylinder(gl);
+	planeLayer = new OGLQuadLayer({
+		width: 2,
+		height: 1,
+		viewPixelHeight: gridTexture.image.height,
+		viewPixelWidth: gridTexture.image.width
+	})
 
-	const sphere = new Mesh(gl, {
-		geometry: sphereGeometry,
-		program: new PrimitiveMaterial(gl, { uniforms: { uColor: {value: [1, 1, 0] } } }),
-	});
-	sphere.position.set(1.3, 0, 0);
-	sphere.setParent(scene);
+	scene.addChild(planeLayer);
 
-	const cube = new Mesh(gl, {
-		geometry: cubeGeometry,
-		program: new PrimitiveMaterial(gl, { uniforms: { uColor: {value: [1, 0, 0] } } }),
-	});
-	cube.position.set(0, -1.3, 0);
-	cube.setParent(scene);
 
-	const cylinder = new Mesh(gl, {
-		geometry: cylinderGeometry,
-		program: new PrimitiveMaterial(gl, { uniforms: { uColor: {value: [0, 0, 1]} } }),
-	});
-	cylinder.position.set(-1.3, 0, 0);
-	cylinder.setParent(scene);
-
-	renderer.requestAnimatioFrame(update);
+	renderer.requestAnimationFrame(update);
 	/**
 	 *
 	 * @param {number} time
@@ -148,11 +111,7 @@ import { XRRenderer } from "./xr/XRRenderer";
 			planeLayer.dirty = true;
 		}
 
-		sphere.rotation.y -= 0.03;
-		cube.rotation.y -= 0.04;
-		cylinder.rotation.y -= 0.02;
-
-		renderer.gl.clearColor(1, 1, 1, 1);
+		renderer.gl.clearColor(0,0,0,0);
 
 		renderer.render({ scene, camera });
 	}

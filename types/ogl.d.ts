@@ -251,15 +251,22 @@ declare module "ogl" {
 		update(): void;
 	}
 
-	class Mesh extends Transform {
+	class Mesh <G = object, P = Program>  extends Transform{
+		geometry: G;
+		program: P;
+
 		constructor(gl: GLContext, options?: any);
 	}
 
-	class Plane extends Mesh {}
+	class Geometry {
+		constructor(gl: GLContext, options?: any);
+	}
 
-	class Sphere extends Mesh {}
+	class Plane extends Geometry {}
 
-	class Box extends Mesh {}
+	class Sphere extends Geometry {}
 
-	class Cylinder extends Mesh {}
+	class Box extends Geometry {}
+
+	class Cylinder extends Geometry {}
 }

@@ -16,12 +16,12 @@ import type {
 	XRSessionMode,
 	XRWebGLBinding,
 	XRWebGLLayer,
+	IXRCompositionLayerInit,
 } from "webxr";
 import { XRSessionLayers } from ".";
 import { OGLQuadLayer, OGLXRLayer } from "./OGLXRLayer";
 import { XRRenderTarget } from "./XRRenderTarget";
 import type { XRInputTransform } from "./XRInputTransform";
-import { sources } from "webpack";
 
 /* Polyfill when needed */
 new XRLayers();
@@ -29,7 +29,6 @@ new XRLayers();
 function getXR() {
 	return navigator.xr;
 }
-
 export interface ISessionRequest {
 	mode?: XRSessionMode;
 	space?: XRReferenceSpaceType;
@@ -67,9 +66,9 @@ export class XRState extends EventTarget {
 		context: XRRenderer,
 		{
 			mode = "immersive-vr",
-			space = "local-floor",
+			space = "local",
 			options = {
-				requiredFeatures: ["local-floor"],
+				requiredFeatures: ["local"],
 				optionalFeatures: ["layers"],
 			},
 		}: ISessionRequest = {}
@@ -149,7 +148,7 @@ export class XRState extends EventTarget {
 	// called from layer binding for dropping layer from state
 	/* internal*/
 	onLayerDestroy(layer: XRCompositionLayer | XRWebGLLayer) {
-		if (!XRState.layersSupport) {
+		if (!XRState.layersSupport || !this.session) {
 			return;
 		}
 
@@ -170,7 +169,7 @@ export class XRState extends EventTarget {
 	getLayer(
 		gl: GLContext,
 		type: "base" | "cube" | "quad" | "sphere" = "base",
-		options: any = {}
+		options: IXRCompositionLayerInit & Record<string, any> = { space: this.space, viewPixelHeight: 100, viewPixelWidth: 100 }
 	): XRCompositionLayer | XRWebGLLayer {
 		options = Object.assign(
 			{},
@@ -183,11 +182,7 @@ export class XRState extends EventTarget {
 			(type !== "base" || this.layers.length > 1)
 		) {
 			console.warn("[XR] Only single base layer is supported!");
-			return this.baseLayer;
-		}
-
-		// check that supported
-		if (!this.glBinding && XRState.layersSupport) {
+			return null;
 		}
 
 		let layer: XRCompositionLayer | XRWebGLLayer;
@@ -288,7 +283,7 @@ type TRafCallback = (time: number, frame?: XRFrame) => void;
 export class XRRenderer extends Renderer {
 	static layersCtors: Record<
 		"cube" | "quad" | "sphere",
-		new (context: XRRenderer, ...any: any[]) => OGLXRLayer
+		new (...any: any[]) => OGLXRLayer
 	> = {
 		cube: null,
 		sphere: null,
@@ -309,12 +304,17 @@ export class XRRenderer extends Renderer {
 
 		this.xr = new XRState(this);
 
+		this._onLayerDestroy = this._onLayerDestroy.bind(this);
 		this._internalLoop = this._internalLoop.bind(this);
 
 		this.xr.addEventListener("xrend", this.onSessionLost.bind(this));
 		this.xr.addEventListener("xrstart", this.onSessionStart.bind(this));
 
 		this.attrs = this.gl.getContextAttributes();
+
+		Object.values(XRRenderer.layersCtors).forEach((ctor: typeof OGLXRLayer) => {
+			ctor && (ctor.context = this);
+		});
 	}
 
 	_internalLoop(time?: number, frame?: XRFrame) {
@@ -349,6 +349,12 @@ export class XRRenderer extends Renderer {
 		};
 	}
 
+	/**
+	 * @deprecated use layer constructor instead
+	 * @param type
+	 * @param options
+	 * @returns
+	 */
 	createLayer<T extends XRCompositionLayer = XRCompositionLayer>(
 		type: "cube" | "quad" | "sphere" = "quad",
 		options: any = {}
@@ -363,27 +369,55 @@ export class XRRenderer extends Renderer {
 			return null;
 		}
 
-		const layer = new Ctor(this, options);
-
-		this.layers.push(layer);
-
-		let nativeLayer: XRCompositionLayer;
-
-		if (XRState.layersSupport) {
-			nativeLayer = this.xr.getLayer(
-				this.gl,
-				type,
-				options
-			) as XRCompositionLayer;
-		}
-
-		layer.bindLayer(nativeLayer);
+		const layer = new Ctor(options);
 
 		return layer as OGLXRLayer<T, any>;
 	}
 
+	/**
+	 * Try to bind virtyal layer to native layer when XR is enabled and layer supported
+	 */
+	bindNativeLayerTo(layer: OGLXRLayer): boolean {
+		const {
+			type, options
+		} = layer;
+
+		let nativeLayer: XRCompositionLayer;
+
+		if (XRState.layersSupport) {
+
+			options.space = this.xr.space;
+
+			try {
+				nativeLayer = this.xr.getLayer(
+					this.gl,
+					type as any,
+					options
+				) as XRCompositionLayer;
+			} catch(e) {
+				console.error('[LAYER Binding Error]', e);
+			}
+		}
+
+		layer.bindLayer(nativeLayer);
+
+		return !!nativeLayer;
+	}
+
+	registerLayer(layer: OGLXRLayer): number {
+		if (this.layers.indexOf(layer) > -1) {
+			this.layers.splice(this.layers.indexOf(layer), 1);
+		}
+
+		this.bindNativeLayerTo(layer);
+
+		layer.onLayerDestroy = this._onLayerDestroy;
+
+		return this.layers.unshift(layer);
+	}
+
 	/* called by layer internal */
-	onLayerDestroy(layer: OGLXRLayer, nativeOnly: boolean) {
+	_onLayerDestroy(layer: OGLXRLayer, nativeOnly: boolean) {
 		if (!nativeOnly) {
 			this.layers = this.layers.filter((e) => layer !== e);
 		}
@@ -397,13 +431,9 @@ export class XRRenderer extends Renderer {
 		this._clearLoop();
 
 		for (const layer of this.layers) {
-			// clear refs
-			layer.nativeLayer = null;
-			layer.onLayerDestroy = null;
-			layer.destroy();
+			// clear refs to native
+			layer.bindLayer(null);
 		}
-
-		this.layers = [];
 
 		// rerun render loop
 		this._attachLoop();
@@ -416,6 +446,8 @@ export class XRRenderer extends Renderer {
 
 		// must be, because we should render
 		this.xr.getLayer(this.gl, "base");
+
+		this.layers.forEach((l) => this.bindNativeLayerTo(l));
 	}
 
 	async requestXR(options?) {
@@ -551,10 +583,6 @@ export class XRRenderer extends Renderer {
 		this.bindFramebuffer();
 
 		this.layers.forEach((e) => {
-			if (e === (baseLayer as any)) {
-				return;
-			}
-
 			e.update(lastXRFrame);
 		});
 	}
@@ -564,6 +592,11 @@ export class XRRenderer extends Renderer {
 		if (!options.target && this.xr.active) {
 			return this.renderXR(options);
 		}
+
+
+		this.layers.forEach((e) => {
+			e.update(null);
+		});
 
 		super.render(options);
 	}

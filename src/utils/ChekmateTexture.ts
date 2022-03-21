@@ -7,7 +7,9 @@ function generateCheckmate (width = 256, height = 256, count = 4) {
 
 	const gridCtx = grid.getContext('2d');
 
-	gridCtx.fillStyle = 'black';
+	gridCtx.fillStyle = 'white';
+	gridCtx.fillRect(0, 0, width, height);
+	gridCtx.fillStyle = 'green';
 
 	const sx = width / count | 0;
 	const sy = height / count | 0;

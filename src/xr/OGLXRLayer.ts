@@ -1,25 +1,31 @@
-import { Mesh, Texture, Transform, IImageSource, Quat, Vec3 } from "ogl";
+import { Texture, Transform, IImageSource, Quat, Vec3 } from "ogl";
 import type {
 	IQuadLayerInit,
 	XRCompositionLayer,
 	XRFrame,
 	XRQuadLayer,
 	XRRigidTransform,
-	XRView,
 } from "webxr";
-import { QuadPrimitive } from "../primitives/QuadPrimitive";
+
+import { ILayerPrimitive, QuadPrimitive } from "../primitives/QuadPrimitive";
 import type { XRRenderer } from "./XRRenderer";
 import { XRRenderTarget } from "./XRRenderTarget";
+
+const tmpQuat = new Quat();
+const tmpPos = new Vec3();
 
 export class OGLXRLayer<
 	T extends XRCompositionLayer = XRCompositionLayer,
 	V = any
 > extends Transform {
+	static context: XRRenderer;
+	public id: number = 0;
+
 	context: XRRenderer;
 	options: V;
 	nativeLayer: T;
 	nativeTransform: XRRigidTransform;
-	emulatedLayers: Mesh[]; //
+	emulatedLayers: ILayerPrimitive[]; //
 	targets: Record<string, XRRenderTarget> = {};
 	referencedTexture: Texture<IImageSource> = null;
 	dirty: boolean = false;
@@ -30,22 +36,28 @@ export class OGLXRLayer<
 
 	transformDirty: boolean = true;
 
-	constructor(context: XRRenderer, options: V) {
+	constructor(options: V) {
 		super();
 
 		this.options = options;
-		this.context = context;
+		this.context = (this.constructor as typeof OGLXRLayer).context;
+
+		if (!this.context) {
+			throw new Error('Layer not registered in XRRendere or called before init');
+		}
 
 		this.onLayerDestroy = () => {};
+
+		this.id = this.context.registerLayer(this);
 	}
 
 	get isNative() {
 		return !!this.nativeLayer && !this.emulatedLayers;
 	}
 
-	protected _removeFallbackLayers(layers: Array<Mesh>): void {}
+	protected _removeFallbackLayers(layers: Array<ILayerPrimitive>): void {}
 
-	protected _createFallbackLayers(): Array<Mesh> {
+	protected _createFallbackLayers(): Array<ILayerPrimitive> {
 		throw new Error("Not implemented");
 	}
 
@@ -82,9 +94,15 @@ export class OGLXRLayer<
 			this.nativeLayer = layer;
 			this._updateNative(null);
 		} else {
-			// add virtual laye
+			// add virtual layer
 			this.createFallback();
 		}
+	}
+
+	protected _updateFallback(frame: XRFrame) {
+		this.emulatedLayers.forEach((e) => {
+			e.texture = this.referencedTexture;
+		});
 	}
 
 	protected _updateNative(frame: XRFrame = null) {
@@ -92,19 +110,18 @@ export class OGLXRLayer<
 		// need has a invalidate stat, but this is not implemented
 
 		if (this.transformDirty || !this.nativeTransform) {
-			const q = new Quat();
-			const p = new Vec3();
 
 			this.updateMatrixWorld(false);
 
-			this.worldMatrix.getRotation(q);
-			this.worldMatrix.getTranslation(p);
+			this.worldMatrix.getRotation(tmpQuat);
+			this.worldMatrix.getTranslation(tmpPos);
 
-			this.nativeTransform = new self.XRRigidTransform(p,q);
+			this.nativeTransform = new self.XRRigidTransform(tmpPos,tmpQuat);
 		}
 	}
 
 	update(frame: XRFrame) {
+		this.emulatedLayers && this._updateFallback(frame);
 		this.nativeLayer && this._updateNative(frame);
 	}
 
@@ -128,7 +145,11 @@ export class OGLXRLayer<
 
 		this.emulatedLayers = this._createFallbackLayers();
 		this.emulatedLayers &&
-			this.emulatedLayers.forEach((e) => this.addChild(e));
+			this.emulatedLayers.forEach((e, i) => {
+				e.texture = this.referencedTexture;
+				e.eye =  this.emulatedLayers.length === 1 ? 'none' : ['left', 'right'][i] as any;
+				this.addChild(e)
+			});
 	}
 
 	destroyFallback() {
@@ -175,9 +196,9 @@ export class OGLQuadLayer extends OGLXRLayer<XRQuadLayer, IQuadLayerInit> {
 	}
 
 	// called before fallback layer is removed
-	protected _removeFallbackLayers(layer: Array<Mesh>): void {}
+	protected _removeFallbackLayers(layer: Array<ILayerPrimitive>): void {}
 
-	protected _createFallbackLayers(): Array<Mesh> {
+	protected _createFallbackLayers(): Array<ILayerPrimitive> {
 		const fallback = [new QuadPrimitive(this.context.gl, this.options)];
 
 		if (this.options.layout?.includes("stereo")) {

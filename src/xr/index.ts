@@ -40,17 +40,20 @@ declare module "webxr" {
 		width: number;
 	}
 
-	interface ICompositionLayerInit {
+	interface IXRProjectionLayerInit {
 
 	}
-	interface IQuadLayerInit {
-		height?: number;
-		width?: number;
+	interface IXRCompositionLayerInit {
 		layout?: 'default' | 'mono' | 'stereo' | 'stereo-left-righ' | 'stereo-top-bottom';
-		space: XRSpace;
-		transform?: XRRigidTransform;
+		space?: XRSpace;
 		viewPixelHeight: number;
 		viewPixelWidth: number;
+	}
+
+	interface IQuadLayerInit extends IXRCompositionLayerInit {
+		height?: number;
+		width?: number;
+		transform?: XRRigidTransform;
 		colorFormat?: number;
 	}
 
@@ -69,7 +72,7 @@ declare module "webxr" {
 		constructor (session: XRSessionLayers, context: WebGL2RenderingContext | WebGLRenderingContext);
 
 		createQuadLayer (init: IQuadLayerInit): XRCubeLayer;
-		createProjectionLayer (init?: ICompositionLayerInit): XRProjectionLayer;
+		createProjectionLayer (init?: IXRProjectionLayerInit): XRProjectionLayer;
 
 		getSubImage (layer: XRCompositionLayer, frame: XRFrame, eye?:  'none' | 'left' | 'right'): XRWebGLSubImage;
 		getViewSubImage (layer: XRProjectionLayer, frame: XRView): XRWebGLSubImage;
