@@ -1,14 +1,10 @@
 import {
 	Camera,
 	Transform,
-	Mesh,
-	Sphere,
-	Box,
-	Cylinder,
 	Texture,
 } from "ogl";
 import { XRQuadLayer } from "webxr";
-import { OGLQuadLayer, OGLXRLayer } from "./xr/OGLXRLayer";
+import { OGLQuadLayer, OGLXRLayer } from "./xr/layers/";
 import { XRRenderer } from "./xr/XRRenderer";
 
 {
@@ -116,7 +112,7 @@ import { XRRenderer } from "./xr/XRRenderer";
 		planeLayer.rotation.y -= 0.02;
 
 		planeLayer.referencedTexture = gridTexture;
-		planeLayer.dirty = true;
+		planeLayer.contentDirty = true;
 
 		renderer.gl.clearColor(0,0,0,0);
 

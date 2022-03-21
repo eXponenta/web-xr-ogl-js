@@ -19,7 +19,7 @@ import type {
 	IXRCompositionLayerInit,
 } from "webxr";
 import { XRSessionLayers } from ".";
-import { OGLQuadLayer, OGLXRLayer } from "./OGLXRLayer";
+import { OGLQuadLayer, OGLXRLayer } from "./layers";
 import { XRRenderTarget } from "./XRRenderTarget";
 import type { XRInputTransform } from "./XRInputTransform";
 

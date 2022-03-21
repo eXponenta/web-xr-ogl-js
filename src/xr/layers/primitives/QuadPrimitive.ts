@@ -1,17 +1,12 @@
-import { Mesh, Plane, Texture, Transform } from "ogl";
+import { Mesh, Plane } from "ogl";
+import { ILayerPrimitive } from "./ILayerPrimitive";
 import { PrimitiveMaterial } from "./PrimitiveMaterial";
-
-export interface ILayerPrimitive <T extends object = any> extends Transform {
-	eye: 'none' | 'left' | 'right';
-	texture: Texture<any>;
-	alphaOnly: boolean;
-	apply(options: T);
-}
 
 export interface IQuadPrimitiveInit {
 	width?: number;
 	height?: number;
 }
+
 export class QuadPrimitive extends Mesh <Plane, PrimitiveMaterial>  implements ILayerPrimitive <IQuadPrimitiveInit> {
 	constructor(
 		context: GLContext,

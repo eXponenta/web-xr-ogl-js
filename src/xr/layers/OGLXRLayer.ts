@@ -1,15 +1,12 @@
 import { Texture, Transform, IImageSource, Quat, Vec3 } from "ogl";
-import type {
-	IQuadLayerInit,
+import {
 	XRCompositionLayer,
-	XRFrame,
-	XRQuadLayer,
-	XRRigidTransform,
+	XRFrame, XRRigidTransform
 } from "webxr";
 
-import { ILayerPrimitive, QuadPrimitive } from "../primitives/QuadPrimitive";
-import type { XRRenderer } from "./XRRenderer";
-import { XRRenderTarget } from "./XRRenderTarget";
+import { ILayerPrimitive } from "./primitives/";
+import { XRRenderer } from "../XRRenderer";
+import { XRRenderTarget } from "../XRRenderTarget";
 
 const tmpQuat = new Quat();
 const tmpPos = new Vec3();
@@ -17,7 +14,7 @@ const tmpPos = new Vec3();
 export class OGLXRLayer<
 	T extends XRCompositionLayer = XRCompositionLayer,
 	V = any
-> extends Transform {
+	> extends Transform {
 	static context: XRRenderer;
 
 	protected _context: XRRenderer;
@@ -42,7 +39,7 @@ export class OGLXRLayer<
 
 	texture: Texture<IImageSource> = null;
 
-	public set dirty (v) {
+	public set dirty(v) {
 		this.contentDirty = true;
 	}
 
@@ -80,7 +77,7 @@ export class OGLXRLayer<
 			throw new Error('Layer not registered in XRRendere or called before init');
 		}
 
-		this.onLayerDestroy = () => {};
+		this.onLayerDestroy = () => { };
 	}
 
 	protected initDone() {
@@ -94,7 +91,7 @@ export class OGLXRLayer<
 			return;
 		}
 
-		for(let key in this.nativeLayer) {
+		for (let key in this.nativeLayer) {
 			if (key in this.options) {
 				this.nativeLayer[key] = (this.options as any)[key];
 			}
@@ -107,7 +104,7 @@ export class OGLXRLayer<
 		return !!this.nativeLayer;
 	}
 
-	protected _removeClipMesh(layers: ILayerPrimitive): void {}
+	protected _removeClipMesh(layers: ILayerPrimitive): void { }
 
 	protected _createClipMesh(): ILayerPrimitive {
 		throw new Error("Not implemented");
@@ -168,7 +165,6 @@ export class OGLXRLayer<
 	protected _updateNative(frame: XRFrame = null) {
 		// we can pool it, XRRig not allow pooling
 		// need has a invalidate stat, but this is not implemented
-
 		if (this.transformDirty || !this.nativeTransform) {
 
 			this.updateMatrixWorld(false);
@@ -176,11 +172,11 @@ export class OGLXRLayer<
 			this.worldMatrix.getRotation(tmpQuat);
 			this.worldMatrix.getTranslation(tmpPos);
 
-			this.nativeTransform = new self.XRRigidTransform(tmpPos,tmpQuat);
+			this.nativeTransform = new self.XRRigidTransform(tmpPos, tmpQuat);
 		}
 
 		if (this.dimensionsDirty && this.nativeLayer) {
-			this._syncWithNative()
+			this._syncWithNative();
 		}
 	}
 
@@ -231,7 +227,7 @@ export class OGLXRLayer<
 		this.onLayerDestroy?.(this, false);
 		this.destroyNative();
 
-		for(let key in this.targets) {
+		for (let key in this.targets) {
 			this.targets[key].destroy();
 		}
 
@@ -241,76 +237,5 @@ export class OGLXRLayer<
 
 	dispose() {
 		this.destroy();
-	}
-}
-
-export class OGLQuadLayer extends OGLXRLayer<XRQuadLayer, IQuadLayerInit> implements IQuadLayerInit {
-	readonly type: "cube" | "quad" | "none" = "quad";
-
-	constructor(options: IQuadLayerInit) {
-		super(options);
-
-		this.initDone();
-	}
-
-	set width(v: number) {
-		this.options.width = v;
-		this.dimensionsDirty = true;
-	}
-
-	get width() {
-		return this.options.width;
-	}
-
-	set height(v: number) {
-		this.options.height = v;
-		this.dimensionsDirty = true;
-	}
-
-	get height() {
-		return this.options.height;
-	}
-
-	set viewPixelWidth (v: number) {
-		this.options.viewPixelWidth = v;
-		this.dimensionsDirty = true;
-	}
-
-	get viewPixelWidth() {
-		return this.options.viewPixelWidth;
-	}
-
-	set viewPixelHeight(v: number) {
-		this.options.viewPixelHeight = v;
-		this.dimensionsDirty = true;
-	}
-
-	get viewPixelHeight() {
-		return this.options.viewPixelHeight;
-	}
-
-	protected _createClipMesh(): ILayerPrimitive {
-		return new QuadPrimitive(
-			this._context.gl, this.options
-		);
-	}
-
-	_updateNative(frame: XRFrame = null): void {
-		super._updateNative(frame);
-
-		this.nativeLayer.transform = this.nativeTransform;
-
-		if ((this.nativeLayer.needsRedraw || this.contentDirty) && frame && this.texture) {
-
-			if (!this.options.layout?.includes('stereo')) {
-				this.getRenderTarget(frame, 'none').copyFrom(this.texture);;
-			} else {
-				for(let key of ['left', 'right'] as const) {
-					this.getRenderTarget(frame, key).copyFrom(this.texture);
-				}
-			}
-
-			this.contentDirty = false;
-		}
 	}
 }

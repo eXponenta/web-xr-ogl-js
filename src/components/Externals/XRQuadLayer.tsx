@@ -1,7 +1,6 @@
 import { forwardRef } from 'react';
 import { extend, Node } from 'react-ogl';
-import { selectProps } from '../../utils/selectProps';
-import { OGLQuadLayer } from '../../xr/OGLXRLayer';
+import { OGLQuadLayer } from '../../xr/layers';
 
 extend({
 	XrQuadLayer : OGLQuadLayer
