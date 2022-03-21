@@ -17,6 +17,8 @@ export class QuadPrimitive extends Mesh <Plane, PrimitiveMaterial>  implements I
 			geometry: new Plane(context, { width: 2, height: 2}),
 			program: new PrimitiveMaterial(context, null),
 		});
+
+		options && this.apply(options);
 	}
 
 	set alphaOnly (v: boolean) {
