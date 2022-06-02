@@ -1,11 +1,14 @@
-import { IImageSource, Texture } from "ogl";
-import type { XRWebGLSubImage } from "webxr";
-import { XRRenderer } from "./XRRenderer";
+/* eslint-disable @typescript-eslint/no-shadow */
+/* eslint-disable no-multi-assign */
+import { IImageSource, Texture } from 'ogl';
+import type { XRWebGLSubImage } from 'webxr';
+import type { XRRenderer } from './XRRenderer';
 
 export class XRRenderTarget {
 	isMSAA = false;
 
-	readonly supportsInvalidateFramebuffer = /OculusBrowser/g.test( navigator.userAgent );
+	readonly supportsInvalidateFramebuffer = /OculusBrowser/g.test(navigator.userAgent);
+
 	readonly context: XRRenderer;
 
 	viewport: {
@@ -27,7 +30,7 @@ export class XRRenderTarget {
 
 	copyBuffer: WebGLFramebuffer;
 
-	ignoreDepthValue: boolean = false;
+	ignoreDepthValue = false;
 
 	constructor(context: XRRenderer) {
 		this.context = context;
@@ -35,16 +38,16 @@ export class XRRenderTarget {
 		this.buffer = context.gl.createFramebuffer();
 	}
 
+	get depth() {
+		return !!this.depthTexture;
+	}
+
 	get width(): number {
-		return this.subImageAttachment
-			? this.subImageAttachment.viewport.width
-			: this.referencedTexture?.width || 0;
+		return this.subImageAttachment ? this.subImageAttachment.viewport.width : this.referencedTexture?.width || 0;
 	}
 
 	get height(): number {
-		return this.subImageAttachment
-			? this.subImageAttachment.viewport.height
-			: this.referencedTexture?.height || 0;
+		return this.subImageAttachment ? this.subImageAttachment.viewport.height : this.referencedTexture?.height || 0;
 	}
 
 	get isVirtual(): boolean {
@@ -52,10 +55,7 @@ export class XRRenderTarget {
 	}
 
 	get texture(): WebGLTexture {
-		return (
-			this.subImageAttachment?.colorTexture ||
-			this.referencedTexture?.texture
-		);
+		return this.subImageAttachment?.colorTexture || this.referencedTexture?.texture;
 	}
 
 	get depthTexture(): WebGLTexture {
@@ -82,9 +82,7 @@ export class XRRenderTarget {
 		this.subImageAttachment = subImage;
 
 		if (this.renderBuffers.length > 0) {
-			this.renderBuffers.forEach((buffer) =>
-				gl.deleteRenderbuffer(buffer)
-			);
+			this.renderBuffers.forEach((buffer) => gl.deleteRenderbuffer(buffer));
 			this.renderBuffers = [];
 		}
 
@@ -101,13 +99,7 @@ export class XRRenderTarget {
 			target: gl.FRAMEBUFFER,
 		});
 
-		gl.framebufferTexture2D(
-			gl.FRAMEBUFFER,
-			gl.COLOR_ATTACHMENT0,
-			gl.TEXTURE_2D,
-			subImage.colorTexture,
-			0
-		);
+		gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, subImage.colorTexture, 0);
 
 		if (subImage.depthStencilTexture) {
 			gl.framebufferTexture2D(
@@ -115,7 +107,7 @@ export class XRRenderTarget {
 				gl.DEPTH_ATTACHMENT,
 				gl.TEXTURE_2D,
 				subImage.depthStencilTexture,
-				0
+				0,
 			);
 		}
 
@@ -132,43 +124,33 @@ export class XRRenderTarget {
 			// bind MSAA buffer
 			this.context.bindFramebuffer(this);
 
-			let rb = (this.renderBuffers[0] = gl.createRenderbuffer());
+			const rb = (this.renderBuffers[0] = gl.createRenderbuffer());
 
 			gl.bindRenderbuffer(gl.RENDERBUFFER, rb);
 
-			gl.framebufferRenderbuffer(
-				gl.FRAMEBUFFER,
-				gl.COLOR_ATTACHMENT0,
-				gl.RENDERBUFFER,
-				rb
-			);
+			gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, rb);
 
 			gl.renderbufferStorageMultisample(
 				gl.RENDERBUFFER,
 				samples,
 				gl.RGBA8,
 				subImage.textureWidth,
-				subImage.textureHeight
+				subImage.textureHeight,
 			);
 
 			if (subImage.depthStencilTexture) {
-				let rb = (this.renderBuffers[1] = gl.createRenderbuffer());
+				const rb = (this.renderBuffers[1] = gl.createRenderbuffer());
 
 				gl.bindRenderbuffer(gl.RENDERBUFFER, rb);
 
-				gl.framebufferRenderbuffer(
-					gl.FRAMEBUFFER,
-					gl.DEPTH_ATTACHMENT,
-					gl.RENDERBUFFER,
-					rb
-				);
+				gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, rb);
 
 				gl.renderbufferStorageMultisample(
 					gl.RENDERBUFFER,
 					samples,
 					gl.DEPTH_COMPONENT24,
 					subImage.textureWidth,
-					subImage.textureHeight
+					subImage.textureHeight,
 				);
 			}
 		}
@@ -195,28 +177,13 @@ export class XRRenderTarget {
 
 		// be sure that texture is actual
 		texture.update();
-		texture.bind();
+		// texture.bind();
 
-		gl.framebufferTexture2D(
-			gl.FRAMEBUFFER,
-			gl.COLOR_ATTACHMENT0,
-			gl.TEXTURE_2D,
-			texture.texture,
-			0
-		);
+		gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture.texture, 0);
 
 		this.context.bind2DTextureDirect(this.subImageAttachment.colorTexture);
 
-		gl.copyTexSubImage2D(
-			gl.TEXTURE_2D,
-			0,
-			0,
-			0,
-			0,
-			0,
-			this.width,
-			this.height
-		);
+		gl.copyTexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 0, 0, this.width, this.height);
 
 		// revert back
 		gl.framebufferTexture2D(
@@ -224,7 +191,7 @@ export class XRRenderTarget {
 			gl.COLOR_ATTACHMENT0,
 			gl.TEXTURE_2D,
 			this.subImageAttachment.colorTexture,
-			0
+			0,
 		);
 
 		// unbind state
@@ -238,13 +205,12 @@ export class XRRenderTarget {
 
 		const { gl } = <{ gl: WebGL2RenderingContext }>this.context;
 		const { textureHeight, textureWidth } = this.subImageAttachment;
-		const invalidation = [ gl.COLOR_ATTACHMENT0 ];
+		const invalidation = [gl.COLOR_ATTACHMENT0];
 
-		this.context.bindFramebuffer({target: gl.READ_FRAMEBUFFER, buffer: this.buffer});
-		this.context.bindFramebuffer({target: gl.DRAW_FRAMEBUFFER, buffer: this.copyBuffer});
+		this.context.bindFramebuffer({ target: gl.READ_FRAMEBUFFER, buffer: this.buffer });
+		this.context.bindFramebuffer({ target: gl.DRAW_FRAMEBUFFER, buffer: this.copyBuffer });
 
 		if (this.ignoreDepthValue) {
-
 			/* this is not work as expexted
 				gl.invalidateFramebuffer(gl.READ_FRAMEBUFFER, [ gl.DEPTH_ATTACHMENT ]);
 				gl.invalidateFramebuffer(gl.DRAW_FRAMEBUFFER, [ gl.DEPTH_ATTACHMENT ]);
@@ -256,15 +222,11 @@ export class XRRenderTarget {
 		let blitMask = gl.COLOR_BUFFER_BIT;
 
 		if (this.ignoreDepthValue === false) {
-			blitMask = blitMask | gl.DEPTH_BUFFER_BIT;
+			// eslint-disable-next-line no-bitwise
+			blitMask |= gl.DEPTH_BUFFER_BIT;
 		}
 
-		gl.blitFramebuffer(
-			0, 0, textureWidth, textureHeight,
-			0, 0, textureWidth, textureHeight,
-			blitMask,
-			gl.NEAREST
-		);
+		gl.blitFramebuffer(0, 0, textureWidth, textureHeight, 0, 0, textureWidth, textureHeight, blitMask, gl.NEAREST);
 
 		if (this.supportsInvalidateFramebuffer) {
 			gl.invalidateFramebuffer(gl.FRAMEBUFFER, invalidation);
@@ -281,14 +243,12 @@ export class XRRenderTarget {
 			return;
 		}
 
-		const  {
-			gl
-		} = this.context;
+		const { gl } = this.context;
 
 		gl.deleteFramebuffer(this.buffer);
 
 		this.copyBuffer && gl.deleteFramebuffer(this.copyBuffer);
-		this.renderBuffers.forEach(rb => {
+		this.renderBuffers.forEach((rb) => {
 			gl.deleteRenderbuffer(rb);
 		});
 

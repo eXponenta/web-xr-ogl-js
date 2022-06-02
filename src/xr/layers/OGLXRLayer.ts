@@ -1,26 +1,56 @@
-import { Texture, Transform, IImageSource, Quat, Vec3 } from "ogl";
-import * as WEBXR from "webxr";
-import { XRRenderTarget } from "../XRRenderTarget";
+/* eslint-disable no-restricted-globals */
+import { Texture, Transform, IImageSource, Quat, Vec3 } from 'ogl';
+import type * as WEBXR from 'webxr';
+import { XRRenderTarget } from '../XRRenderTarget';
 
-import type { ILayerPrimitive } from "./primitives/";
-import type { XRRenderer } from "../XRRenderer";
+import type { ILayerPrimitive } from './primitives';
+import type { XRRenderer } from '../XRRenderer';
 
 const tmpQuat = new Quat();
 const tmpPos = new Vec3();
 
+let ID = 0;
+
 export class OGLXRLayer<T extends WEBXR.XRCompositionLayer = WEBXR.XRCompositionLayer, V = any> extends Transform {
+	static ALLOW_NATIVE = true;
+
+	static ALLOW_ALPHA_CLIP = true;
 
 	static context: XRRenderer;
 
 	public readonly options: V;
 
-	public readonly type: "cube" | "quad" | "none" = "none";
+	public readonly type: 'cube' | 'quad' | 'none' = 'none';
 
-	public id: number = 0;
+	public willRender = true;
 
-	public depthClip: boolean = true;
+	public id = 0;
 
-	public contentDirty: boolean = false;
+	public contentDirty = false;
+
+	public useNative = true;
+
+	public clipMode: 'alpha' | 'depth' = 'alpha';
+
+	// update layer pixel size depends of texture that attached to it
+	public useContentSize = false;
+
+	// marked when needs call onLayerConstruct
+	protected _needsCallReconstruct = false;
+
+	// called when layer was update by any reason
+	// or when native layer was constructed
+	public onLayerConstruct: () => void = null;
+
+	private _label: string;
+
+	public set label(v) {
+		this._label = v || `layer_${this.id}_${this.type}`;
+	}
+
+	public get label() {
+		return this._label;
+	}
 
 	/**
 	 * @deprecated
@@ -34,23 +64,17 @@ export class OGLXRLayer<T extends WEBXR.XRCompositionLayer = WEBXR.XRComposition
 		return this.contentDirty;
 	}
 
-	public texture: Texture<IImageSource> = null;
+	public _texture: Texture<IImageSource> = null;
 
-	/**
-	 * @deprecated See texture
-	 */
-	public get referencedTexture() {
-		return this.texture;
+	public get texture() {
+		return this._texture;
 	}
 
-	/**
-	 * @deprecated See texture
-	 */
-	public set referencedTexture(v) {
-		this.contentDirty = this.contentDirty || v !== this.texture || v.needsUpdate;
-		this.texture = v;
-	}
+	public set texture(v) {
+		this.contentDirty = this.contentDirty || v !== this._texture || v?.needsUpdate;
 
+		this._attachTexture(v);
+	}
 
 	public get isNative() {
 		return !!this.nativeLayer;
@@ -62,7 +86,10 @@ export class OGLXRLayer<T extends WEBXR.XRCompositionLayer = WEBXR.XRComposition
 
 	protected dimensionsDirty = false;
 
-	protected transformDirty: boolean = true;
+	protected transformDirty = true;
+
+	// marked when native layers must be reallocated
+	protected layerNeedReconstruct = false;
 
 	protected clipMesh: ILayerPrimitive;
 
@@ -75,14 +102,61 @@ export class OGLXRLayer<T extends WEBXR.XRCompositionLayer = WEBXR.XRComposition
 	constructor(options?: V) {
 		super();
 
-		this.options = options || {} as V;
+		this.options = options || ({} as V);
 		this.context = (this.constructor as typeof OGLXRLayer).context;
 
 		if (!this.context) {
-			throw new Error('Layer not registered in XRRendere or called before init');
+			throw new Error('Layer not registered in XRRenderer or called before init');
 		}
 
-		this.onLayerDestroy = () => { };
+		this.onLayerDestroy = () => undefined;
+		this.id = ID++;
+		this.label = `layer_${this.id}_${this.type}`;
+	}
+
+	public get needsUpdateNative() {
+		return (
+			OGLXRLayer.ALLOW_NATIVE &&
+			this.useNative &&
+			(!this.nativeLayer || this.layerNeedReconstruct) &&
+			this.isValid
+		);
+	}
+
+	public get isValid() {
+		return false;
+	}
+
+	/**
+	 * External texture onUpdate event, fired when texture load to GPU
+	 */
+	protected onTextureUpdate() {
+		this.contentDirty = true;
+	}
+
+	private _attachTexture(texture: Texture<any>) {
+		if (texture === this._texture) {
+			return;
+		}
+
+		const old = this._texture;
+
+		if (old) {
+			old.onUpdate = old._onUpdateCached;
+			old._onUpdateCached = null;
+		}
+
+		if (texture) {
+			texture._onUpdateCached = texture.onUpdate;
+
+			texture.onUpdate = () => {
+				texture._onUpdateCached?.();
+				this.onTextureUpdate();
+			};
+		}
+
+		this._needsCallReconstruct = true;
+		this._texture = texture;
 	}
 
 	protected initDone() {
@@ -91,63 +165,59 @@ export class OGLXRLayer<T extends WEBXR.XRCompositionLayer = WEBXR.XRComposition
 		this.createClipMesh();
 	}
 
-	protected _syncWithNative() {
-		if (!this.nativeLayer) {
-			return;
-		}
-
-		for (let key in this.nativeLayer) {
-			if (key in this.options) {
-				this.nativeLayer[key] = (this.options as any)[key];
-			}
-		}
-
-		this.nativeLayer.transform = this.nativeTransform;
-	}
-
-	protected _removeClipMesh(layers: ILayerPrimitive): void { }
+	// eslint-disable-next-line @typescript-eslint/no-empty-function
+	protected _removeClipMesh(layers: ILayerPrimitive): void {}
 
 	protected _createClipMesh(): ILayerPrimitive {
-		throw new Error("Not implemented");
+		throw new Error('Not implemented');
 	}
 
-	public getRenderTarget(
-		frame: WEBXR.XRFrame,
-		eye: "left" | "right" | "none" = "none"
-	): XRRenderTarget {
+	public getRenderTarget(frame: WEBXR.XRFrame, eye: 'left' | 'right' | 'none' = 'none'): XRRenderTarget {
 		const target = this.targets[eye] || new XRRenderTarget(this.context);
 
-		target.referencedTexture = this.texture;
-		target.attach(
-			this.context.xr.glBinding.getSubImage(
-				this.nativeLayer as WEBXR.XRCompositionLayer,
-				frame,
-				eye
-			)
-		);
+		target.referencedTexture = this._texture;
+		target.attach(this.context.xr.glBinding.getSubImage(this.nativeLayer as WEBXR.XRCompositionLayer, frame, eye));
 
 		this.targets[eye] = target;
 
 		return target;
 	}
 
-	// bind layer, if layer is null - native will be unbound and dropeed
+	// bind layer, if layer is null - native will be unbound and dropped
 	/* internal */ bindLayer(layer: T | null) {
-		if (this.nativeLayer && this.nativeLayer !== layer) {
+		if (layer === this.nativeLayer && (!this.layerNeedReconstruct || !layer)) {
+			return;
+		}
+
+		if (this.nativeLayer) {
 			this.onLayerDestroy?.(this, true);
 			this._destroyNative();
 		}
 
+		this.nativeLayer = layer;
+
 		if (layer) {
-			this.nativeLayer = layer;
 			this._updateNative(null);
 		}
 
 		this.createClipMesh();
 
 		// if layer is presented, use clip mesh only as depth clipper
-		this.clipMesh.alphaOnly = !!layer;
-		this.clipMesh.visible = !layer || this.depthClip;
+		// eslint-disable-next-line no-nested-ternary
+		this.clipMesh.maskMode = layer
+			? OGLXRLayer.ALLOW_ALPHA_CLIP && this.clipMode === 'alpha'
+				? 'alpha'
+				: 'depth'
+			: 'none';
+
+		// always must be visible for intersection
+		this.clipMesh.visible = true; // !layer || (this.useDepthClip && OGLXRLayer.ALLOW_DEPTH_CLIP);
+
+		this.layerNeedReconstruct = false;
+
+		// force update layer after binding
+		this.contentDirty = true;
+		this._needsCallReconstruct = true;
 	}
 
 	protected _updateClipMesh(frame: WEBXR.XRFrame) {
@@ -160,15 +230,14 @@ export class OGLXRLayer<T extends WEBXR.XRCompositionLayer = WEBXR.XRComposition
 			this.clipMesh.apply(this.options);
 		}
 
-		this.clipMesh.texture = this.texture;
+		this.clipMesh.texture = this._texture;
 	}
 
 	protected _updateNative(frame: WEBXR.XRFrame = null) {
 		// we can pool it, XRRig not allow pooling
 		// need has a invalidate stat, but this is not implemented
 		if (this.transformDirty || !this.nativeTransform) {
-
-			this.updateMatrixWorld(false);
+			this.updateMatrixWorld(true);
 
 			this.worldMatrix.getRotation(tmpQuat);
 			this.worldMatrix.getTranslation(tmpPos);
@@ -176,16 +245,41 @@ export class OGLXRLayer<T extends WEBXR.XRCompositionLayer = WEBXR.XRComposition
 			this.nativeTransform = new self.XRRigidTransform(tmpPos, tmpQuat);
 		}
 
-		if (this.dimensionsDirty && this.nativeLayer) {
-			this._syncWithNative();
+		if (this.dimensionsDirty) {
+			for (const key in this.nativeLayer) {
+				if (key in this.options) {
+					this.nativeLayer[key] = (this.options as any)[key];
+				}
+			}
+
+			this._needsCallReconstruct = true;
+		}
+
+		this.nativeLayer.transform = this.nativeTransform;
+
+		if (this.label === 'right') {
+			const p = this.nativeTransform.position;
+			console.debug('right pos:', [p.x, p.y, p.z].map((e) => e.toFixed(3)).join(','));
 		}
 	}
 
 	public update(frame: WEBXR.XRFrame) {
+		// skip update
+		if (!(this.willRender && this.visible)) {
+			return;
+		}
+
 		this.clipMesh && this._updateClipMesh(frame);
+
 		this.nativeLayer && this._updateNative(frame);
 		// should be applied in top
 		this.dimensionsDirty = false;
+
+		if (this._needsCallReconstruct) {
+			this.onLayerConstruct?.();
+		}
+
+		this._needsCallReconstruct = false;
 	}
 
 	public needUpdateTransform() {
@@ -195,6 +289,7 @@ export class OGLXRLayer<T extends WEBXR.XRCompositionLayer = WEBXR.XRComposition
 	protected _destroyNative() {
 		this.nativeLayer = null;
 		this.nativeTransform = null;
+		this._needsCallReconstruct = true;
 	}
 
 	protected createClipMesh() {
@@ -221,15 +316,16 @@ export class OGLXRLayer<T extends WEBXR.XRCompositionLayer = WEBXR.XRComposition
 	}
 
 	public destroy() {
+		console.log('destroy native layer instance');
 		this.onLayerDestroy?.(this, false);
 		this._destroyNative();
 
-		for (let key in this.targets) {
+		for (const key in this.targets) {
 			this.targets[key].destroy();
 		}
 
 		this.targets = null;
-		this.texture = null;
+		this._texture = null;
 	}
 
 	public dispose() {

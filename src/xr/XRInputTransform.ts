@@ -1,13 +1,14 @@
-import { Mat4, Transform } from "ogl";
-import { XRInputSource } from "webxr";
-import { XRState } from "./XRState";
+import { Mat4, Transform } from 'ogl';
+import type { XRInputSource } from 'webxr';
+import { getCorrection } from './xrInputCorrection';
+import type { XRState } from './XRState';
 
-type PathedTransform = Transform &  {
-	__transfromPatched?: boolean;
+type PatchedTransform = Transform & {
+	__transformPatched?: boolean;
 	virtualParentMatrix?: Mat4;
-}
+};
 
-function path_for_updateMatrixWorld(this: PathedTransform, force: boolean) {
+function path_for_updateMatrixWorld(this: PatchedTransform, force: boolean) {
 	if (this.matrixAutoUpdate) this.updateMatrix();
 	if (this.worldMatrixNeedsUpdate || force) {
 		if (this.virtualParentMatrix === null) this.worldMatrix.copy(this.matrix);
@@ -21,52 +22,74 @@ function path_for_updateMatrixWorld(this: PathedTransform, force: boolean) {
 	}
 }
 
-const pathWorldTransform = (node: PathedTransform) => {
-	if (!node || node.__transfromPatched) {
+const pathWorldTransform = (node: PatchedTransform) => {
+	if (!node || node.__transformPatched) {
 		return node;
 	}
 
-	node.__transfromPatched = true;
+	node.__transformPatched = true;
 	node.updateMatrixWorld = path_for_updateMatrixWorld.bind(node);
 	node.virtualParentMatrix = new Mat4();
 
 	return node;
-}
+};
 
-const restoreWorldTransfrom = (node: PathedTransform) => {
-	if (!node || !node.__transfromPatched) {
+const restoreWorldTransform = (node: PatchedTransform) => {
+	if (!node || !node.__transformPatched) {
 		return node;
 	}
 
-	delete node.__transfromPatched;
-	// delete override for instance, updateMatrixWorld will be readen from proto
+	delete node.__transformPatched;
+	// delete override for instance, updateMatrixWorld will be reader from proto
 	delete node.updateMatrixWorld;
 	delete node.virtualParentMatrix;
 
 	return node;
-}
+};
 
 export class XRInputTransform extends Transform {
-	private _source: XRInputSource & { viewTransfromNode?: XRInputTransform } | null;
+	// eslint-disable-next-line no-use-before-define
+	protected _source: (XRInputSource & { viewTransformNode?: XRInputTransform }) | null;
 
-	private _rayNode: PathedTransform | null;
+	private _rayNodeOffset: Transform;
+
+	private _rayNode: Transform;
+
+	private _visible: boolean;
+
+	private _valid: boolean;
+
+	private _updateDeltaSpace: boolean = true;
 
 	virtualParentMatrix: Mat4 = new Mat4();
 
-	hideInvalidState: boolean = false;
+	hideInvalidState = false;
 
-	set rayNode (v: Transform) {
+	constructor() {
+		super();
+
+		this._rayNodeOffset = new Transform();
+		this.addChild(this._rayNodeOffset);
+	}
+
+	set visible(v) {
+		this._visible = !!v;
+	}
+
+	get visible() {
+		return this._visible && (this.hideInvalidState ? this._valid : true);
+	}
+
+	set rayNode(v: Transform) {
 		if (this._rayNode === v) {
 			return;
 		}
 
-		restoreWorldTransfrom(this._rayNode);
-
 		this._rayNode?.setParent(null, true);
 
-		this._rayNode = pathWorldTransform(v);
+		this._rayNode = v;
 
-		this._rayNode?.setParent(this);
+		this._rayNode?.setParent(this._rayNodeOffset);
 	}
 
 	get rayNode() {
@@ -78,71 +101,87 @@ export class XRInputTransform extends Transform {
 			return;
 		}
 
+		const activeSource = this._source;
+
 		if (this._source) {
-			this._source.viewTransfromNode = null;
+			this._source.viewTransformNode = null;
 		}
 
 		this._source = v;
-		this.visible = !!v;
+		this._valid = !!v;
 
 		if (this._source) {
-			this._source.viewTransfromNode = this;
+			this._source.viewTransformNode = this;
+			this._updateDeltaSpace = true;
 		}
+
+		this.inputUpdated(activeSource, v);
 	}
 
 	get source() {
 		return this._source;
 	}
 
-	updateMatrixWorld(force) {
-		path_for_updateMatrixWorld.call(this, force);
-    }
-
-	updateRayTransfrom ({ lastXRFrame, space }: XRState) {
-		if (!this._rayNode) {
-			return;
-		}
-
-		if (!this._source) {
-			this.hideInvalidState && (this._rayNode.visible = false);
-			return;
-		}
-
-		const pose = lastXRFrame.getPose(this._source.targetRaySpace, space);
-
-		if (!pose) {
-			this.hideInvalidState && (this._rayNode.visible = false);
-			return;
-		}
-
-		this.hideInvalidState && (this._rayNode.visible = true);
-
-		this._rayNode.virtualParentMatrix.copy(pose.transform.matrix as any);
-
-		this._rayNode.worldMatrixNeedsUpdate = true;
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	protected inputUpdated(from: XRInputSource, to: XRInputSource) {
+		//
 	}
 
-	update (state: XRState) {
-		this.updateRayTransfrom(state);
+	updateRayTransform({ lastXRFrame, space }: XRState) {
+		if (!this._updateDeltaSpace || !this._source) return;
+
+		const rootPos = lastXRFrame.getPose(this._source.gripSpace, space);
+		const rayPos = lastXRFrame.getPose(this._source.targetRaySpace, space);
+
+		if (!rootPos || !rayPos) return;
+
+		// world to local
+		// we can use a matrix from XR because it Float32Array
+		this._rayNodeOffset.matrix.multiply(rayPos.transform.inverse.matrix as any, rootPos.transform.matrix as any);
+		this._rayNodeOffset.matrix.inverse();
+
+		// apply offset
+		this._rayNodeOffset.matrix.multiply(getCorrection(this._source, true).matrix);
+
+		// decompose matrix to vectors
+		this._rayNodeOffset.decompose();
+
+		this._updateDeltaSpace = false;
+	}
+
+	updateMatrixWorld(force) {
+		path_for_updateMatrixWorld.call(this, force);
+	}
+
+	update(state: XRState) {
+		this.updateRayTransform(state);
 
 		const { lastXRFrame, space } = state;
 
-		if (!this._source || this._source.viewTransfromNode !== this) {
-			this.hideInvalidState && (this.visible = false);
+		if (!this._source || this._source.viewTransformNode !== this) {
+			this._valid = false;
 			return;
 		}
 
 		const pose = lastXRFrame.getPose(this._source.gripSpace, space);
 
-		if (!pose) {
-			this.hideInvalidState && (this.visible = false);
+		this._valid = !!pose;
+
+		if (this.hideInvalidState) {
+			this._rayNodeOffset.visible = this._valid;
+		}
+
+		if (!this._valid) {
 			return;
 		}
 
-		this.hideInvalidState && (this.visible = true);
-
 		this.virtualParentMatrix.copy(pose.transform.matrix as any);
 
+		// apply correction
+		this.virtualParentMatrix.multiply(getCorrection(this._source, false).matrix);
+
 		this.worldMatrixNeedsUpdate = true;
+
+		this._valid = true;
 	}
 }

@@ -1,3 +1,7 @@
+/* eslint-disable no-use-before-define */
+/* eslint-disable @typescript-eslint/no-empty-interface */
+/* eslint-disable @typescript-eslint/no-shadow */
+/* eslint-disable max-classes-per-file */
 import type {
 	XRWebGLLayer,
 	XRSystem,
@@ -7,32 +11,31 @@ import type {
 	XRWebGLLayerInit,
 	XRRigidTransform,
 	XRWebGLBinding,
-	XRProjectionLayer
-} from "webxr";
+} from 'webxr';
 
 declare class XRWebGLLayerExt extends XRWebGLLayer {
 	constructor(
-		sesssion: XRSessionLayers,
+		// eslint-disable-next-line no-use-before-define
+		session: XRSessionLayers,
 		context: WebGL2RenderingContext | WebGLRenderingContext,
-		options?: XRWebGLLayerInit
+		options?: XRWebGLLayerInit,
 	);
 }
 
-declare module "webxr" {
+declare module 'webxr' {
 	interface XRCompositionLayer extends XRLayer {
 		destroy(): void;
 
 		readonly needsRedraw: boolean;
 		readonly ignoreDepthValues: boolean;
-		readonly layout: 'default' | 'mono' | 'stereo' | 'stereo-left-righ' | 'stereo-top-bottom';
+		readonly layout: 'default' | 'mono' | 'stereo' | 'stereo-left-right' | 'stereo-top-bottom';
 
 		transform?: XRRigidTransform;
 
 		blendTextureSourceAlpha: boolean;
 	}
 
-	interface XRProjectionLayer extends XRCompositionLayer {
-	}
+	type XRProjectionLayer = XRCompositionLayer;
 
 	interface XRCubeLayer extends XRCompositionLayer {
 		space: XRSpace;
@@ -50,10 +53,14 @@ declare module "webxr" {
 	}
 
 	interface IXRProjectionLayerInit {
-
+		textureType?: 'texture' | 'texture-array';
+		scaleFactor?: number;
+		colorFormat?: number;
+		depthFormat?: number;
 	}
+
 	interface IXRCompositionLayerInit {
-		layout?: 'default' | 'mono' | 'stereo' | 'stereo-left-righ' | 'stereo-top-bottom';
+		layout?: 'default' | 'mono' | 'stereo' | 'stereo-left-right' | 'stereo-top-bottom';
 		space?: XRSpace;
 		viewPixelHeight: number;
 		viewPixelWidth: number;
@@ -73,18 +80,23 @@ declare module "webxr" {
 		textureWidth: number;
 		textureHeight: number;
 		viewport: {
-			x: number, y: number, width: number, height: number
-		}
+			x: number;
+			y: number;
+			width: number;
+			height: number;
+		};
 	}
 
 	class XRWebGLBinding {
-		constructor (session: XRSessionLayers, context: WebGL2RenderingContext | WebGLRenderingContext);
+		constructor(session: XRSessionLayers, context: WebGL2RenderingContext | WebGLRenderingContext);
 
-		createQuadLayer (init: IQuadLayerInit): XRCubeLayer;
-		createProjectionLayer (init?: IXRProjectionLayerInit): XRProjectionLayer;
+		createQuadLayer(init: IQuadLayerInit): XRCubeLayer;
 
-		getSubImage (layer: XRCompositionLayer, frame: XRFrame, eye?:  'none' | 'left' | 'right'): XRWebGLSubImage;
-		getViewSubImage (layer: XRProjectionLayer, frame: XRView): XRWebGLSubImage;
+		createProjectionLayer(init?: IXRProjectionLayerInit): XRProjectionLayer;
+
+		getSubImage(layer: XRCompositionLayer, frame: XRFrame, eye?: 'none' | 'left' | 'right'): XRWebGLSubImage;
+
+		getViewSubImage(layer: XRProjectionLayer, frame: XRView): XRWebGLSubImage;
 	}
 }
 
@@ -112,13 +124,14 @@ declare global {
 
 type Optional<T, K extends keyof T> = Pick<Partial<T>, K> & Omit<T, K>;
 
-export type XRRenderStateLayers = Optional<
-	XRRenderState,
-	"depthFar" | "depthNear"
-> & { layers?: Array<XRLayer | XRWebGLLayer> };
+export type XRRenderStateLayers = Optional<XRRenderState, 'depthFar' | 'depthNear'> & {
+	layers?: Array<XRLayer | XRWebGLLayer>;
+};
 
-export type XRSessionLayers = Omit<XRSession, "renderState"> & {
+export type XRSessionLayers = Omit<XRSession, 'renderState'> & {
 	readonly renderState: XRRenderStateLayers;
+	readonly supportedFrameRates?: Float32Array;
+	updateTargetFrameRate?(rate: number): Promise<undefined>;
 	updateRenderState(XRStateInit: XRRenderStateLayers): Promise<void>;
 };
 
