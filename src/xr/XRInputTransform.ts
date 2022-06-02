@@ -136,6 +136,7 @@ export class XRInputTransform extends Transform {
 		if (!rootPos || !rayPos) return;
 
 		// world to local
+		// use a transforms because WebXR emulator crash when try getPose relative targetRaySpace
 		// we can use a matrix from XR because it Float32Array
 		this._rayNodeOffset.matrix.multiply(rayPos.transform.inverse.matrix as any, rootPos.transform.matrix as any);
 		this._rayNodeOffset.matrix.inverse();
