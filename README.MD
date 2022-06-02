@@ -4,3 +4,4 @@ Examples how to use OGL with WebXR support.
 
 Demo: [dist/](https://exponenta.github.io/web-xr-ogl-js/dist)
 
+For Oculus problems see [problems](./PROBLEMS.MD)
