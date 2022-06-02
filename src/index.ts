@@ -2,24 +2,27 @@ import {
 	Camera,
 	Transform,
 	Texture,
+	Box,
+	Mesh,
+	NormalProgram
 } from "ogl";
-import { XRQuadLayer } from "webxr";
-import { OGLQuadLayer, OGLXRLayer } from "./xr/layers/";
+import { XRInputSource } from "webxr";
+import { OGLQuadLayer } from "./xr/layers/";
+import { XRInputModel } from "./xr/XRInputModel";
 import { XRRenderer } from "./xr/XRRenderer";
 
 {
 
-
-	const requiestButton = document.querySelector("#requiest-xr");
+	const requestButton = document.querySelector("#request-xr");
 	const canvas = document.createElement("canvas");
 	const renderer = new XRRenderer({
-		dpr: 2,
+		dpr: window.devicePixelRatio,
 		canvas,
 		antialias: true,
 		autoClear: true,
 	});
 
-	document.querySelector('#react-content').appendChild(canvas);
+	document.body.appendChild(canvas);
 
 	/**
 	 * @type {WebGLRenderingContext}
@@ -79,23 +82,53 @@ import { XRRenderer } from "./xr/XRRenderer";
 	resize();
 
 
-	let planeLayer: OGLXRLayer<XRQuadLayer>;
-
-	requiestButton.addEventListener("click", async () => {
+	requestButton.addEventListener("click", async () => {
 		await renderer.requestXR();
 	});
 
 	const scene = new Transform();
 	scene.position.set(0, 1, -4);
 
-	planeLayer = new OGLQuadLayer({
+	const planeLayer = new OGLQuadLayer({
 		width: 2,
 		height: 1,
 		viewPixelHeight: gridTexture.image.height,
 		viewPixelWidth: gridTexture.image.width
 	})
 
+	planeLayer.texture = gridTexture;
+
+
 	scene.addChild(planeLayer);
+
+	const map = new Map<XRInputSource, XRInputModel>();
+
+	const rayLiner = () => {
+		const geometry = new Box(gl, { width: 0.01, height: 0.01 });
+		const t = new Mesh<Box, NormalProgram> (gl, { program: new NormalProgram(gl), geometry });
+		t.scale.set(1, 1, 0.2);
+		t.position.set(0, 0, -0.1);
+		return t;
+	};
+
+	renderer.xr.addEventListener('xrinputsourceschange', (e) => {
+		const inputs = [...renderer.xr.inputSources] as XRInputSource[];
+		const last = [...map.keys()];
+		const added = inputs.filter(e => !last.includes(e));
+		const removed = last.filter(e => !inputs.includes(e));
+
+		removed.forEach((e) => {
+			map.get(e).setParent(null);
+			map.delete(e);
+		});
+
+		added.forEach((e)=>{
+			const model = new XRInputModel(gl, { inputSource: e });
+			model.rayNode = rayLiner();
+			scene.addChild(model);
+			map.set(e, model);
+		});
+	});
 
 
 	renderer.requestAnimationFrame(update);
@@ -111,7 +144,6 @@ import { XRRenderer } from "./xr/XRRenderer";
 
 		planeLayer.rotation.y -= 0.02;
 
-		planeLayer.referencedTexture = gridTexture;
 		planeLayer.contentDirty = true;
 
 		renderer.gl.clearColor(0,0,0,0);

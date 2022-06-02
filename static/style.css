@@ -15,7 +15,12 @@ html, body, canvas, .overlay {
 	display: flex;
 }
 
-#requiest-xr {
-	margin: auto auto;
+#request-xr {
+	width: 300px;
+	height: 100px;
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%);
 }
 
