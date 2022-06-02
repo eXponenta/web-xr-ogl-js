@@ -177,7 +177,7 @@ export class XRRenderTarget {
 
 		// be sure that texture is actual
 		texture.update();
-		// texture.bind();
+		texture.bind();
 
 		gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture.texture, 0);
 

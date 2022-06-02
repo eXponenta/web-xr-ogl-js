@@ -7,7 +7,8 @@ export class OGLQuadLayer extends OGLXRLayer<XRQuadLayer, IQuadLayerInit> implem
 	public readonly type: 'cube' | 'quad' | 'none' = 'quad';
 
 	constructor(options: IQuadLayerInit) {
-		super(options);
+		// force RGBA
+		super({... options, colorFormat: WebGLRenderingContext.prototype.RGBA });
 
 		this.initDone();
 	}

@@ -128,7 +128,7 @@ export class XRInputTransform extends Transform {
 	}
 
 	updateRayTransform({ lastXRFrame, space }: XRState) {
-		if (!this._updateDeltaSpace || !this._source) return;
+		if (!this._source) return;
 
 		const rootPos = lastXRFrame.getPose(this._source.gripSpace, space);
 		const rayPos = lastXRFrame.getPose(this._source.targetRaySpace, space);
