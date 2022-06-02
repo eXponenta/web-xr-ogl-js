@@ -19,8 +19,10 @@ export class QuadPrimitive extends Mesh<Plane, PrimitiveMaterial> implements ILa
 			geometry: new Plane(context, { width: 2, height: 2 }),
 			program: new PrimitiveMaterial(context, null),
 		});
+
 		this.options = options;
 		this._renderOrder = 0;
+		this.apply(options);
 	}
 
 	set renderOrder(v) {

@@ -91,10 +91,10 @@ addCorrection({
 	profile: 'oculus-touch-v3',
 	handedness: {
 		left: {
-			ray: { offset: [0.008, 0.008, 0.05], rotation: [0, -7, 0] },
+			ray: { offset: [0.0175, 0., 0.0], rotation: [0, -7, 0] },
 		},
 		right: {
-			ray: { offset: [-0.008, 0.008, 0.05], rotation: [0, 7, 0] },
+			ray: { offset: [-0.0175, 0., 0.0], rotation: [0, 7, 0] },
 		},
 	},
 });

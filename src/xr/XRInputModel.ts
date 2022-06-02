@@ -4,7 +4,6 @@ import * as XRMotionControllerService from '@webxr-input-profiles/motion-control
 import { spawn } from './GLTFTree';
 import { XRInputTransform } from './XRInputTransform';
 
-const MODULE_URL = '@webxr-input-profiles/motion-controllers';
 const BASE_PROFILE_URL = 'https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets@1.0.10/dist/profiles';
 
 const controllersCache: Record<
