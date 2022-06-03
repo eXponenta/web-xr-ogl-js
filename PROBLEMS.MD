@@ -17,6 +17,15 @@ If disable OpenXR - all ok.
 
 Simple layers demos from https://immersive-web.github.io/webxr-samples/layers-samples/ workings on both runtime.
 
+__GRIP SPACE + RAY SPACE__
+
+Grip space and Ray Space different for default  WebXR backend and OpenXR.
+
+RaySpace misaligned with oculus controller ray, and require manual correction.
+
+But getPose return  different delta transformation between gripSpace and raySpace ~~~each random session~~ between default and OpenXR backend, that limit manual correction, because we can't check what is backend used in current device. Old OS not support OpenXR (checked on Oculus os 20.18)
+
+Maybe we not understand what gripSpace and raySpace means?
 
 __LAYERS BLINKING__: Not fully reproduced
 
@@ -24,12 +33,3 @@ In some cases we has problem with layers blinking after `updateRenderState`, pro
 Still trying  to get  100% reproduction.
 
 In this demo we try simulate application lags when we handle 'blinking'. 'blink' should presents when you click 'select' trigger: blue board begun draws on red layer place and back between state changes on some frames.
-
-
-__GRIP SPACE + RAY SPACE__
-
-RaySpace misaligned with oculus controller ray, and require manual correction.
-
-But getPose return  different delta transformation between gripSpace and raySpace each random session, that prevent manual correction.
-Maybe we not understand what gripSpace and raySpace means?
-
