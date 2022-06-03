@@ -130,19 +130,19 @@ export class XRInputTransform extends Transform {
 	updateRayTransform({ lastXRFrame, space }: XRState) {
 		if (!this._source) return;
 
-		const rootPos = lastXRFrame.getPose(this._source.gripSpace, space);
-		const rayPos = lastXRFrame.getPose(this._source.targetRaySpace, space);
+		// const rootPos = lastXRFrame.getPose(this._source.gripSpace, space);
+		const rayPos = lastXRFrame.getPose(this._source.targetRaySpace, this._source.gripSpace);
 
-		if (!rootPos || !rayPos) return;
+		if (!rayPos) return;
 
 		// world to local
 		// use a transforms because WebXR emulator crash when try getPose relative targetRaySpace
 		// we can use a matrix from XR because it Float32Array
-		this._rayNodeOffset.matrix.multiply(rayPos.transform.inverse.matrix as any, rootPos.transform.matrix as any);
-		this._rayNodeOffset.matrix.inverse();
+		// this._rayNodeOffset.matrix.multiply(rayPos.transform.inverse.matrix as any, rootPos.transform.matrix as any);
+		// this._rayNodeOffset.matrix.inverse();
 
 		// apply offset
-		this._rayNodeOffset.matrix.multiply(getCorrection(this._source, true).matrix);
+		this._rayNodeOffset.matrix.copy(rayPos.transform.matrix);//.multiply(getCorrection(this._source, true).matrix);
 
 		// decompose matrix to vectors
 		this._rayNodeOffset.decompose();
