@@ -16,7 +16,7 @@ const canvas = document.createElement("canvas");
 const renderer = new XRRenderer({
 	dpr: window.devicePixelRatio,
 	canvas,
-	antialias: false,
+	antialias: true,
 	autoClear: true,
 });
 

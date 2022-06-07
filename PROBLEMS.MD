@@ -2,7 +2,7 @@ Bugs reproduced 100% on both device: Quest 2 and 1 on Browser Version 21.2.0.1.
 
 Runtime support only Quad layer and Projection layer atm.
 
-__Erros on OpenXR backend.__
+__Errors on OpenXR backend.__
 
 Layers will empty when you enable a OpenXR backend in chrome://flags in Oculus browser.
 Error type is:
