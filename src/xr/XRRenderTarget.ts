@@ -211,10 +211,8 @@ export class XRRenderTarget {
 		this.context.bindFramebuffer({ target: gl.DRAW_FRAMEBUFFER, buffer: this.copyBuffer });
 
 		if (this.ignoreDepthValue) {
-			/* this is not work as expexted
-				gl.invalidateFramebuffer(gl.READ_FRAMEBUFFER, [ gl.DEPTH_ATTACHMENT ]);
-				gl.invalidateFramebuffer(gl.DRAW_FRAMEBUFFER, [ gl.DEPTH_ATTACHMENT ]);
-			*/
+			gl.invalidateFramebuffer(gl.READ_FRAMEBUFFER, [ gl.DEPTH_ATTACHMENT ]);
+			gl.invalidateFramebuffer(gl.DRAW_FRAMEBUFFER, [ gl.DEPTH_ATTACHMENT ]);
 
 			invalidation.push(gl.DEPTH_ATTACHMENT);
 		}
