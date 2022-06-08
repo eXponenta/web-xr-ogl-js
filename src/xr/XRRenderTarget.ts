@@ -4,11 +4,17 @@ import { IImageSource, Texture } from 'ogl';
 import type { XRWebGLSubImage } from 'webxr';
 import type { XRRenderer } from './XRRenderer';
 
+type framebufferTexture2DParams = Parameters<WebGLRenderingContextBase['framebufferTexture2D']>;
+type extParams = [samples: number];
+
+interface IMSAATextureExtension {
+	framebufferTexture2DMultisampleEXT: (...param: [...framebufferTexture2DParams, ...extParams]) => void;
+}
+
 export class XRRenderTarget {
 	isMSAA = false;
 
 	readonly supportsInvalidateFramebuffer = /OculusBrowser/g.test(navigator.userAgent);
-	readonly supportsMSAARenderToTexture = /OculusBrowser/g.test(navigator.userAgent);
 
 	readonly context: XRRenderer;
 
@@ -33,13 +39,16 @@ export class XRRenderTarget {
 
 	ignoreDepthValue = false;
 
-	extension: any;
+	msaaTextureExtension?: IMSAATextureExtension;
 
 	constructor(context: XRRenderer) {
 		this.context = context;
 		this.target = context.gl.FRAMEBUFFER;
 		this.buffer = context.gl.createFramebuffer();
-		this.extension = context.gl.getExtension('WEBGL_multisampled_render_to_texture');
+
+		// @see
+		// https://github.com/oframe/ogl/blob/master/src/core/Renderer.js#L214
+		this.msaaTextureExtension = context.getExtension<IMSAATextureExtension>('WEBGL_multisampled_render_to_texture');
 	}
 
 	get depth() {
@@ -82,7 +91,10 @@ export class XRRenderTarget {
 
 		const { gl } = <{ gl: WebGL2RenderingContext }>this.context;
 
-		this.isMSAA = msaa && !this.supportsMSAARenderToTexture;
+		const { msaaTextureExtension } = this;
+
+		this.isMSAA = msaa && !msaaTextureExtension;
+
 		this.subImageAttachment = subImage;
 
 		if (this.renderBuffers.length > 0) {
@@ -103,14 +115,28 @@ export class XRRenderTarget {
 			target: gl.FRAMEBUFFER,
 		});
 
-		if (this.supportsMSAARenderToTexture)
-			this.extension.framebufferTexture2DMultisampleEXT(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, subImage.colorTexture, 0, 4);
-		else
-			gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, subImage.colorTexture, 0);
+		if (msaaTextureExtension) {
+			msaaTextureExtension.framebufferTexture2DMultisampleEXT(
+				gl.FRAMEBUFFER,
+				gl.COLOR_ATTACHMENT0,
+				gl.TEXTURE_2D,
+				subImage.colorTexture,
+				0,
+				4,
+			);
+		} else {
+			gl.framebufferTexture2D(
+				gl.FRAMEBUFFER,
+				gl.COLOR_ATTACHMENT0,
+				gl.TEXTURE_2D,
+				subImage.colorTexture,
+				0
+			);
+		}
 
 		if (subImage.depthStencilTexture) {
-			if (this.supportsMSAARenderToTexture)
-				this.extension.framebufferTexture2DMultisampleEXT(
+			if (msaaTextureExtension)
+				msaaTextureExtension.framebufferTexture2DMultisampleEXT(
 					gl.FRAMEBUFFER,
 					gl.DEPTH_ATTACHMENT,
 					gl.TEXTURE_2D,
@@ -228,9 +254,10 @@ export class XRRenderTarget {
 			return;
 		}
 
+		this.invalidate();
+
 		const { gl } = <{ gl: WebGL2RenderingContext }>this.context;
 		const { textureHeight, textureWidth } = this.subImageAttachment;
-		const invalidation = [gl.COLOR_ATTACHMENT0];
 
 		this.context.bindFramebuffer({ target: gl.READ_FRAMEBUFFER, buffer: this.buffer });
 		this.context.bindFramebuffer({ target: gl.DRAW_FRAMEBUFFER, buffer: this.copyBuffer });
