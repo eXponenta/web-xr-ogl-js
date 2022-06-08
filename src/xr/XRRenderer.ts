@@ -454,6 +454,7 @@ export class XRRenderer extends Renderer {
 		});
 
 		if (baseLayerTarget) {
+			baseLayerTarget.invalidate();
 			baseLayerTarget.blit();
 		}
 
