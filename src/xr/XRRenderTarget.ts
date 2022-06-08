@@ -245,20 +245,10 @@ export class XRRenderTarget {
 		this.context.bindFramebuffer();
 	}
 
-	invalidate() {
-		const { gl } = <{ gl: WebGL2RenderingContext }>this.context;
-
-		if (this.ignoreDepthValue && this.supportsInvalidateFramebuffer) {
-			gl.invalidateFramebuffer(gl.DRAW_FRAMEBUFFER, [gl.DEPTH_STENCIL_ATTACHMENT]);
-		}
-	}
-
 	blit() {
 		if (!this.isMSAA) {
 			return;
 		}
-
-		this.invalidate();
 
 		const { gl } = <{ gl: WebGL2RenderingContext }>this.context;
 		const { textureHeight, textureWidth } = this.subImageAttachment;
