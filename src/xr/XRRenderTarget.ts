@@ -12,6 +12,8 @@ interface IMSAATextureExtension {
 }
 
 export class XRRenderTarget {
+	static USE_MSAA_TEXTURE_WHEN_EXIST = true;
+
 	isMSAA = false;
 
 	readonly supportsInvalidateFramebuffer = /OculusBrowser/g.test(navigator.userAgent);
@@ -48,7 +50,9 @@ export class XRRenderTarget {
 
 		// @see
 		// https://github.com/oframe/ogl/blob/master/src/core/Renderer.js#L214
-		this.msaaTextureExtension = context.getExtension<IMSAATextureExtension>('WEBGL_multisampled_render_to_texture');
+		this.msaaTextureExtension = XRRenderTarget.USE_MSAA_TEXTURE_WHEN_EXIST
+			? context.getExtension<IMSAATextureExtension>('WEBGL_multisampled_render_to_texture')
+			: null;
 	}
 
 	get depth() {

@@ -7,9 +7,12 @@ import {
 	NormalProgram
 } from "ogl";
 import { XRInputSource } from "webxr";
+import { XRRenderTarget } from "./xr";
 import { OGLQuadLayer, OGLXRLayer } from "./xr/layers/";
 import { XRInputModel } from "./xr/XRInputModel";
 import { XRRenderer } from "./xr/XRRenderer";
+
+const params = new URLSearchParams(window.location.search);
 
 const requestButton = document.querySelector("#request-xr");
 const canvas = document.createElement("canvas");
@@ -24,6 +27,8 @@ document.body.appendChild(canvas);
 
 OGLXRLayer.ALLOW_NATIVE = true;
 OGLXRLayer.ALLOW_ALPHA_CLIP = true;
+
+XRRenderTarget.USE_MSAA_TEXTURE_WHEN_EXIST = !params.get('no-ext');
 
 /**
  * @type {WebGLRenderingContext}
