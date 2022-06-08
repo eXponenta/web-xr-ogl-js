@@ -8,6 +8,7 @@ export class XRRenderTarget {
 	isMSAA = false;
 
 	readonly supportsInvalidateFramebuffer = /OculusBrowser/g.test(navigator.userAgent);
+	readonly supportsMSAARenderToTexture = /OculusBrowser/g.test(navigator.userAgent);
 
 	readonly context: XRRenderer;
 
@@ -32,10 +33,13 @@ export class XRRenderTarget {
 
 	ignoreDepthValue = false;
 
+	extension: any;
+
 	constructor(context: XRRenderer) {
 		this.context = context;
 		this.target = context.gl.FRAMEBUFFER;
 		this.buffer = context.gl.createFramebuffer();
+		this.extension = context.gl.getExtension('WEBGL_multisampled_render_to_texture');
 	}
 
 	get depth() {
@@ -78,7 +82,7 @@ export class XRRenderTarget {
 
 		const { gl } = <{ gl: WebGL2RenderingContext }>this.context;
 
-		this.isMSAA = msaa;
+		this.isMSAA = msaa && !this.supportsMSAARenderToTexture;
 		this.subImageAttachment = subImage;
 
 		if (this.renderBuffers.length > 0) {
@@ -99,16 +103,29 @@ export class XRRenderTarget {
 			target: gl.FRAMEBUFFER,
 		});
 
-		gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, subImage.colorTexture, 0);
+		if (this.supportsMSAARenderToTexture)
+			this.extension.framebufferTexture2DMultisampleEXT(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, subImage.colorTexture, 0, 4);
+		else
+			gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, subImage.colorTexture, 0);
 
 		if (subImage.depthStencilTexture) {
-			gl.framebufferTexture2D(
-				gl.FRAMEBUFFER,
-				gl.DEPTH_ATTACHMENT,
-				gl.TEXTURE_2D,
-				subImage.depthStencilTexture,
-				0,
-			);
+			if (this.supportsMSAARenderToTexture)
+				this.extension.framebufferTexture2DMultisampleEXT(
+					gl.FRAMEBUFFER,
+					gl.DEPTH_ATTACHMENT,
+					gl.TEXTURE_2D,
+					subImage.depthStencilTexture,
+					0,
+					4,
+				)
+			else
+				gl.framebufferTexture2D(
+					gl.FRAMEBUFFER,
+					gl.DEPTH_ATTACHMENT,
+					gl.TEXTURE_2D,
+					subImage.depthStencilTexture,
+					0,
+				);
 		}
 
 		if (this.referencedTexture) {
@@ -198,6 +215,14 @@ export class XRRenderTarget {
 		this.context.bindFramebuffer();
 	}
 
+	invalidate() {
+		const { gl } = <{ gl: WebGL2RenderingContext }>this.context;
+
+		if (this.ignoreDepthValue && this.supportsInvalidateFramebuffer) {
+			gl.invalidateFramebuffer(gl.DRAW_FRAMEBUFFER, [ gl.DEPTH_STENCIL_ATTACHMENT ]);
+		}
+	}
+
 	blit() {
 		if (!this.isMSAA) {
 			return;
@@ -210,13 +235,6 @@ export class XRRenderTarget {
 		this.context.bindFramebuffer({ target: gl.READ_FRAMEBUFFER, buffer: this.buffer });
 		this.context.bindFramebuffer({ target: gl.DRAW_FRAMEBUFFER, buffer: this.copyBuffer });
 
-		if (this.ignoreDepthValue) {
-			gl.invalidateFramebuffer(gl.READ_FRAMEBUFFER, [ gl.DEPTH_ATTACHMENT ]);
-			gl.invalidateFramebuffer(gl.DRAW_FRAMEBUFFER, [ gl.DEPTH_ATTACHMENT ]);
-
-			invalidation.push(gl.DEPTH_ATTACHMENT);
-		}
-
 		let blitMask = gl.COLOR_BUFFER_BIT;
 
 		if (this.ignoreDepthValue === false) {
@@ -225,11 +243,6 @@ export class XRRenderTarget {
 		}
 
 		gl.blitFramebuffer(0, 0, textureWidth, textureHeight, 0, 0, textureWidth, textureHeight, blitMask, gl.NEAREST);
-
-		if (this.supportsInvalidateFramebuffer) {
-			gl.invalidateFramebuffer(gl.FRAMEBUFFER, invalidation);
-			gl.invalidateFramebuffer(gl.READ_FRAMEBUFFER, invalidation);
-		}
 
 		gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
 		// unbind state
