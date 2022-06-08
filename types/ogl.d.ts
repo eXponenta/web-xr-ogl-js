@@ -297,7 +297,7 @@ declare module 'ogl' {
 
 		activeTexture(target: number): void;
 
-		getExtension<T = any> (ext: string, funcName?: string, extFuncName?: string): T;
+		getExtension<T = any>(ext: string, funcName?: string, extFuncName?: string): T;
 	}
 
 	class Transform {

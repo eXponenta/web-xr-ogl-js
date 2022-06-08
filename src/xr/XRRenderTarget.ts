@@ -147,7 +147,7 @@ export class XRRenderTarget {
 					subImage.depthStencilTexture,
 					0,
 					4,
-				)
+				);
 			else
 				gl.framebufferTexture2D(
 					gl.FRAMEBUFFER,
@@ -249,7 +249,7 @@ export class XRRenderTarget {
 		const { gl } = <{ gl: WebGL2RenderingContext }>this.context;
 
 		if (this.ignoreDepthValue && this.supportsInvalidateFramebuffer) {
-			gl.invalidateFramebuffer(gl.DRAW_FRAMEBUFFER, [ gl.DEPTH_STENCIL_ATTACHMENT ]);
+			gl.invalidateFramebuffer(gl.DRAW_FRAMEBUFFER, [gl.DEPTH_STENCIL_ATTACHMENT]);
 		}
 	}
 
