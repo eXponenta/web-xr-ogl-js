@@ -23,10 +23,15 @@ const renderer = new XRRenderer({
 	autoClear: true,
 });
 
+renderer.frustumCull = false;
+
 document.body.appendChild(canvas);
 
+XRRenderTarget.USE_MSAA_TEXTURE_WHEN_EXIST = true;//!params.get('no-ext');
+
 OGLXRLayer.ALLOW_NATIVE = true;
-OGLXRLayer.ALLOW_ALPHA_CLIP = true;
+
+OGLXRLayer.ALLOW_ALPHA_CLIP = false;
 
 /**
  * @type {WebGLRenderingContext}
@@ -40,24 +45,39 @@ const genCanvasLayer = ({ width = 200, height = 100, fill = '#ccc', outline = 'r
 	canvas.width = width;
 	canvas.height = height;
 
-	ctx.fillStyle = fill;
-	ctx.strokeStyle = outline;
-	ctx.lineWidth = 3;
+	const draw = (text) => {
+		ctx.fillStyle = fill;
+		ctx.strokeStyle = outline;
+		ctx.lineWidth = 3;
 
-	ctx.fillRect(0, 0, width, height);
-	ctx.strokeRect(10, 10, width - 20, height - 20);
+		ctx.fillRect(0, 0, width, height);
+		ctx.strokeRect(10, 10, width - 20, height - 20);
 
-	ctx.fillStyle = outline;
-	ctx.font = 'Arial 32px';
+		ctx.fillStyle = outline;
+		ctx.font = 'Arial 32px';
 
-	ctx.fillText(name, 10 * 2 + 5, 10 * 2 + 5);
+		ctx.fillText(text, 10 * 2 + 5, 10 * 2 + 5);
+	}
+
+	draw(name);
 
 	const t = new Texture(gl, { image: canvas });
 	const l = new OGLQuadLayer({ width: width / 400, height: height / 400, viewPixelHeight: height, viewPixelWidth: width });
 
 	l.texture = t;
 
-	return l;
+	let index = 0;
+
+	return {
+		layer: l,
+
+		tick() {
+			draw(name + ' -- ' + (index++));
+			t.image = canvas;
+			t.needsUpdate = true;
+			l.contentDirty = true;
+		}
+	}
 }
 
 const textCanvas = document.createElement('canvas');
@@ -81,32 +101,22 @@ requestButton.addEventListener("click", async () => {
 	await renderer.requestXR();
 });
 
+const cube = new Mesh(gl, {
+	geometry: new Box(gl, { width: 10, height: 10, depth: 10 }),
+	program: new NormalProgram(gl)
+})
+
 const scene = new Transform();
-scene.position.set(0, 0, -2);
 
 const layer1 = genCanvasLayer({width: 300, height: 200});
-const layer2 = genCanvasLayer({width: 100, height: 200, name: 'Vert Layer', fill: '#22cc22', outline: 'blue'});
-const layer3 = genCanvasLayer({width: 300, height: 200, fill: '#cc2222', outline: '#ccc'});
-
-const layer4 = genCanvasLayer({width: 300, height: 200, fill: 'blue', outline: 'white', name: 'Out of board'});
-
-layer1.position.x -= 2;
-layer1.rotation.y = Math.PI / 6;
-layer3.position.x = 2;
-layer3.rotation.y = -Math.PI / 6;
 
 const board = new Transform();
-board.addChild(layer1);
-board.addChild(layer2);
-board.addChild(layer3);
 
-const outOfBoardTree = new Transform();
-outOfBoardTree.addChild(layer4);
+board.position.set(0, 0, -2);
 
+board.addChild(layer1.layer);
 scene.addChild(board);
-scene.addChild(outOfBoardTree);
-
-outOfBoardTree.visible = false;
+scene.addChild(cube)
 
 //emulate loop lag
 const longTask = ()=> {
@@ -115,13 +125,6 @@ const longTask = ()=> {
 	while(i-- > 0) {};
 
 	console.log(performance.now() - start);
-}
-
-const flipBoards = () => {
-	longTask();
-
-	outOfBoardTree.visible = !outOfBoardTree.visible;
-	board.visible = !outOfBoardTree.visible;
 }
 
 const map = new Map<XRInputSource, XRInputModel>();
@@ -133,10 +136,6 @@ const rayLiner = () => {
 	t.position.set(0, 0, -0.1);
 	return t;
 };
-
-renderer.xr.addEventListener('xrstart', () => {
-	renderer.xr.session.addEventListener('selectstart', flipBoards);
-});
 
 renderer.xr.addEventListener('xrinputsourceschange', (e) => {
 	const inputs = [...renderer.xr.inputSources] as XRInputSource[];
@@ -166,5 +165,6 @@ renderer.requestAnimationFrame(update);
 
 function update() {
 	renderer.requestAnimationFrame(update);
+	layer1.tick();
 	renderer.render({ scene, camera });
 }
