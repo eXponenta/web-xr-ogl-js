@@ -16,9 +16,9 @@ export class XRRenderTarget {
 
 	isMSAA = false;
 
-	readonly supportsInvalidateFramebuffer = /OculusBrowser/g.test(navigator.userAgent);
-
 	readonly context: XRRenderer;
+
+	readonly supportsInvalidateFramebuffer = /OculusBrowser/g.test(navigator.userAgent);
 
 	viewport: {
 		x: number;
@@ -97,7 +97,7 @@ export class XRRenderTarget {
 
 		const { msaaTextureExtension } = this;
 
-		this.isMSAA = msaa && !msaaTextureExtension;
+		this.isMSAA = msaa;
 
 		this.subImageAttachment = subImage;
 
@@ -106,20 +106,27 @@ export class XRRenderTarget {
 			this.renderBuffers = [];
 		}
 
-		if (this.isMSAA && !this.copyBuffer) {
+		// we not require copy buffer for msaa texture
+		if (msaa && !msaaTextureExtension && !this.copyBuffer) {
 			this.copyBuffer = gl.createFramebuffer();
+		} else if (this.copyBuffer) {
+			gl.deleteFramebuffer(this.copyBuffer);
+			this.copyBuffer = null;
 		}
 
-		/**
-		 * Create NON MSAA buffer and bind it
-		 *
-		 */
-		this.context.bindFramebuffer({
-			buffer: this.isMSAA ? this.copyBuffer : this.buffer,
-			target: gl.FRAMEBUFFER,
-		});
+		if (this.copyBuffer) {
+			this.context.bindFramebuffer({
+				buffer: this.copyBuffer,
+				target: gl.FRAMEBUFFER,
+			});
+		} else {
+			this.context.bindFramebuffer({
+				buffer: this.buffer,
+				target: gl.FRAMEBUFFER,
+			});
+		}
 
-		if (msaaTextureExtension) {
+		if (msaaTextureExtension && msaa) {
 			msaaTextureExtension.framebufferTexture2DMultisampleEXT(
 				gl.FRAMEBUFFER,
 				gl.COLOR_ATTACHMENT0,
@@ -129,17 +136,11 @@ export class XRRenderTarget {
 				4,
 			);
 		} else {
-			gl.framebufferTexture2D(
-				gl.FRAMEBUFFER,
-				gl.COLOR_ATTACHMENT0,
-				gl.TEXTURE_2D,
-				subImage.colorTexture,
-				0
-			);
+			gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, subImage.colorTexture, 0);
 		}
 
 		if (subImage.depthStencilTexture) {
-			if (msaaTextureExtension)
+			if (msaaTextureExtension && msaa) {
 				msaaTextureExtension.framebufferTexture2DMultisampleEXT(
 					gl.FRAMEBUFFER,
 					gl.DEPTH_ATTACHMENT,
@@ -148,7 +149,7 @@ export class XRRenderTarget {
 					0,
 					4,
 				);
-			else
+			} else {
 				gl.framebufferTexture2D(
 					gl.FRAMEBUFFER,
 					gl.DEPTH_ATTACHMENT,
@@ -156,6 +157,7 @@ export class XRRenderTarget {
 					subImage.depthStencilTexture,
 					0,
 				);
+			}
 		}
 
 		if (this.referencedTexture) {
@@ -163,10 +165,9 @@ export class XRRenderTarget {
 		}
 
 		/**
-		 * MSAA
+		 * MSAA on render buffers
 		 */
-
-		if (this.isMSAA) {
+		if (msaa && !msaaTextureExtension) {
 			const samples = gl.getParameter(gl.MAX_SAMPLES);
 			// bind MSAA buffer
 			this.context.bindFramebuffer(this);
@@ -246,7 +247,7 @@ export class XRRenderTarget {
 	}
 
 	blit() {
-		if (!this.isMSAA) {
+		if (!this.isMSAA || this.msaaTextureExtension) {
 			return;
 		}
 
@@ -264,6 +265,14 @@ export class XRRenderTarget {
 		}
 
 		gl.blitFramebuffer(0, 0, textureWidth, textureHeight, 0, 0, textureWidth, textureHeight, blitMask, gl.NEAREST);
+
+		if (this.supportsInvalidateFramebuffer) {
+			const invalidation = this.ignoreDepthValue
+				? [gl.DEPTH_ATTACHMENT, gl.COLOR_ATTACHMENT0]
+				: [gl.COLOR_ATTACHMENT0];
+			gl.invalidateFramebuffer(gl.FRAMEBUFFER, invalidation);
+			gl.invalidateFramebuffer(gl.READ_FRAMEBUFFER, invalidation);
+		}
 
 		gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
 		// unbind state

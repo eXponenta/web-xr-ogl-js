@@ -28,8 +28,6 @@ document.body.appendChild(canvas);
 OGLXRLayer.ALLOW_NATIVE = true;
 OGLXRLayer.ALLOW_ALPHA_CLIP = true;
 
-XRRenderTarget.USE_MSAA_TEXTURE_WHEN_EXIST = !params.get('no-ext');
-
 /**
  * @type {WebGLRenderingContext}
  */
