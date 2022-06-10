@@ -27,7 +27,7 @@ renderer.frustumCull = false;
 
 document.body.appendChild(canvas);
 
-XRRenderTarget.USE_MSAA_TEXTURE_WHEN_EXIST = true;//!params.get('no-ext');
+XRRenderTarget.USE_MSAA_TEXTURE_WHEN_EXIST = !params.get('no-ext');
 
 OGLXRLayer.ALLOW_NATIVE = true;
 
