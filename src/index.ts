@@ -74,7 +74,7 @@ const genCanvasLayer = ({ width = 200, height = 100, fill = '#ccc', outline = 'r
 		tick() {
 			draw(name + ' -- ' + (index++));
 			t.image = canvas;
-			t.needsUpdate = true;
+			t.update();
 			l.contentDirty = true;
 		}
 	}
